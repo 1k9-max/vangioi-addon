@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'microsoft'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew (if present)
+        run: |
+          if [ -f "./gradlew" ]; then chmod +x ./gradlew; fi
+
+      - name: Build with Gradle
+        run: |
+          if [ -f "./gradlew" ]; then
+            ./gradlew clean build --refresh-dependencies --no-daemon
+          else
+            gradle clean build --refresh-dependencies --no-daemon
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VanGioiAutoFish-jar
+          path: build/libs/*.jar
+          if-no-files-found: error

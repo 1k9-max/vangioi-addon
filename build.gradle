@@ -1,0 +1,66 @@
+plugins {
+	id 'fabric-loom' version '1.9-SNAPSHOT'
+}
+
+version = project.version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+// Project uses non-standard folder names ("src"/"src/vn/resources" instead of
+// the default "src/main/java"/"src/main/resources"), so we point Loom at them.
+sourceSets {
+	main {
+		java {
+			srcDirs = ['src']
+		}
+		resources {
+			srcDirs = ['src/vn/resources']
+			// IMPORTANT: exclude any leftover pre-compiled .class files so they
+			// never get bundled over the freshly-compiled output again.
+			exclude '**/*.class'
+		}
+	}
+}
+
+repositories {
+	// Add extra repositories here if a dependency needs one.
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+processResources {
+	inputs.property "version", project.version
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+jar {
+	manifest {
+		attributes(
+			'Specification-Title': 'Van Gioi Auto Fish',
+			'Specification-Version': project.version,
+			'Implementation-Title': 'Van Gioi Auto Fish',
+			'Implementation-Version': project.version
+		)
+	}
+}

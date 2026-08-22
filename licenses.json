@@ -1,0 +1,12 @@
+{
+  "keys": {
+    "fb5527b22754c3c100e4e6cc90f8b47acaddb5e4e30c8fe9e339c320f7bf96b1": {
+      "type": "PAID",
+      "expires": 1893456000
+    },
+    "c52b875b64dc3d1200cb02c68ee7879137cecacf3fae10d92414532f429ed177": {
+      "type": "FREE",
+      "expires": 0
+    }
+  }
+}

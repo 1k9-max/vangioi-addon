@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "autocropfarmer-addon",
+  "version": "${version}",
+  "name": "Auto Crop Farmer",
+  "description": "Meteor Client addon: tu dong trong lai va giam sat cay trong (Pitcher Crop) theo vung chon.",
+  "authors": [
+    "your-name-here"
+  ],
+  "contact": {
+    "repo": "https://github.com/your-username/autocropfarmer-addon"
+  },
+  "icon": "assets/autocropfarmer/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "meteor": [
+      "com.example.autocropfarmer.AutoCropFarmerAddon"
+    ]
+  },
+  "custom": {
+    "meteor-client:color": "80,200,120"
+  },
+  "depends": {
+    "java": ">=21",
+    "minecraft": ["${mc_version}"],
+    "meteor-client": "*"
+  }
+}

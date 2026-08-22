@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "vangioiautofish",
+  "version": "5.4.0",
+  "name": "Van Gioi Auto Fish (member)",
+  "description": "Client-side auto fishing controller with Van Gioi server Bridge licensing.",
+  "authors": ["VanGioi"],
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "vn.vangioi.autofish.client.VanGioiAutoFishClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "=1.21.4",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

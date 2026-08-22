@@ -6,6 +6,7 @@ import com.example.autocropfarmer.modules.AlchemicalPillMaking;
 import com.example.autocropfarmer.modules.AutoCropFarmer;
 import com.example.autocropfarmer.modules.AutoCropWaterer;
 import com.example.autocropfarmer.modules.AutoFarm;
+import com.example.autocropfarmer.modules.AutoFish;
 import com.example.autocropfarmer.modules.ChatAutoResponder;
 import com.example.autocropfarmer.modules.FlyGotoModule;
 import com.example.autocropfarmer.modules.FlyToPlacementModule;
@@ -34,6 +35,7 @@ public class AutoCropFarmerAddon extends MeteorAddon {
         Modules.get().add(new AutoCropWaterer());
         Modules.get().add(new AlchemicalPillMaking());
         Modules.get().add(new AutoFarm());
+        Modules.get().add(new AutoFish());
         Modules.get().add(new LinhThaoLocations());
         Modules.get().add(new ChatAutoResponder());
         Modules.get().add(new FlyGotoModule());

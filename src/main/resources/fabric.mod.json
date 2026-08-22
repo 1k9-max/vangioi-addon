@@ -17,6 +17,9 @@
       "com.example.autocropfarmer.AutoCropFarmerAddon"
     ]
   },
+  "mixins": [
+    "autocropfarmer-addon.mixins.json"
+  ],
   "custom": {
     "meteor-client:color": "80,200,120"
   },

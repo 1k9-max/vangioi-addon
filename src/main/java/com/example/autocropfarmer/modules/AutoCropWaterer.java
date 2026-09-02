@@ -113,9 +113,11 @@ public class AutoCropWaterer extends Module {
     private final Setting<String> needWaterKeyword = sgGeneral.add(new StringSetting.Builder()
         .name("need-water-keyword")
         .description("Tu khoa (khong phan biet hoa/thuong) tim trong TEXT hien thi cua Giá đỡ giáp de biet "
-            + "cay CAN TUOI. Mac dinh: \"cần tưới\". Bat 'debug-logging' o nhom Debug de xem text thuc te "
-            + "server hien thi trong file autocropwaterer-debug.log.")
-        .defaultValue("cần tưới")
+            + "cay CAN TUOI. Mac dinh: \"thiếu linh dịch\" (khop voi text server hien thi thuc te: "
+            + "\"THIẾU LINH DỊCH (1 LẦN)\" mau xanh duong - xac nhan tu screenshot thuc te). Bat "
+            + "'debug-logging' o nhom Debug de xem text thuc te server hien thi trong file "
+            + "autocropwaterer-debug.log neu server ban dung cau chu khac.")
+        .defaultValue("thiếu linh dịch")
         .build()
     );
 

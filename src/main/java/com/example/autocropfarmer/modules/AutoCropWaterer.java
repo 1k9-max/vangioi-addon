@@ -112,12 +112,12 @@ public class AutoCropWaterer extends Module {
 
     private final Setting<String> needWaterKeyword = sgGeneral.add(new StringSetting.Builder()
         .name("need-water-keyword")
-        .description("Tu khoa (khong phan biet hoa/thuong) tim trong TEXT hien thi cua Giá đỡ giáp de biet "
-            + "cay CAN TUOI. Mac dinh: \"thiếu linh dịch\" (khop voi text server hien thi thuc te: "
-            + "\"THIẾU LINH DỊCH (1 LẦN)\" mau xanh duong - xac nhan tu screenshot thuc te). Bat "
-            + "'debug-logging' o nhom Debug de xem text thuc te server hien thi trong file "
-            + "autocropwaterer-debug.log neu server ban dung cau chu khac.")
-        .defaultValue("thiếu linh dịch")
+        .description("TUY CHON - de trong (mac dinh) se tuoi ngay khi phat hien Giá đỡ giáp an xuat hien "
+            + "dung cot X,Z (giong het cach AutoCropFarmer hoat dong, khong quan tam text). Neu dien vao, "
+            + "se dung THEM lam bo loc phu: bat buoc text tren Giá đỡ giáp phai chua tu khoa nay (khong "
+            + "phan biet hoa/thuong) thi moi tuoi. Bat 'debug-logging' de xem text thuc te trong file "
+            + "autocropwaterer-debug.log.")
+        .defaultValue("")
         .build()
     );
 
@@ -391,23 +391,33 @@ public class AutoCropWaterer extends Module {
 
     private void handleMonitoring() {
         Map<Long, String> hiddenStandInfo = collectHiddenArmorStandInfo();
+
+        if (!hiddenStandInfo.isEmpty()) {
+            log("[MONITORING] Tim thay " + hiddenStandInfo.size() + " cot X,Z co Giá đỡ giáp an.");
+        }
+
         String keyword = needWaterKeyword.get().trim().toLowerCase();
 
         // ===== Giai doan 1: quet & cap nhat pendingWater (chi doc, khong gui packet) =====
+        // Dung DUNG logic da duoc xac nhan hoat dong that trong AutoCropFarmer: CHI CAN co Giá đỡ
+        // giáp an xuat hien dung cot X,Z la coi nhu "can tuoi", KHONG bat buoc phai khop text nao ca
+        // (server co the hien Giá đỡ giáp ma chua kip gan custom name, hoac text khac di doi chut).
+        // Neu "need-water-keyword" duoc dien (khong de trong), dung THEM no nhu 1 bo loc phu (phai
+        // khop CA hai dieu kien) - de trong se chi can Giá đỡ giáp xuat hien la du, giong AutoCropFarmer.
         for (BlockPos base : area) {
             BlockPos cropPos = base.up();
 
             if (!waterCooldownRemaining.isEmpty() && waterCooldownRemaining.containsKey(base)) continue;
             if (pendingWater.contains(base)) continue;
-            if (keyword.isEmpty()) continue;
 
             String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
-            if (standText != null && standText.toLowerCase().contains(keyword)) {
-                pendingWater.add(base);
-                log("[MONITORING] base=" + base + " cropPos=" + cropPos
-                    + " - Giá đỡ giáp bao TEXT chua tu khoa \"" + keyword + "\" (\"" + standText
-                    + "\") -> them vao pendingWater.");
-            }
+            if (standText == null) continue; // Khong co Giá đỡ giáp o cot nay -> chua can tuoi
+
+            if (!keyword.isEmpty() && !standText.toLowerCase().contains(keyword)) continue;
+
+            pendingWater.add(base);
+            log("[MONITORING] base=" + base + " cropPos=" + cropPos
+                + " - Giá đỡ giáp xuat hien dung cot X,Z (text=\"" + standText + "\") -> them vao pendingWater.");
         }
 
         // Dem nguoc cooldown sau khi vua tuoi

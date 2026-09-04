@@ -356,15 +356,9 @@ public class AutoCropFarmer extends Module {
     // Dem so lan that bai lien tiep khi swap Item 1 de "tuoi" - qua nguong se tu dong kich hoat nap Linh Dich.
     private final Map<BlockPos, Integer> item1WaterAttempts = new HashMap<>();
 
-    // Dem so lan that bai lien tiep khi tuoi bang Item 1 - dung de tu dong kich hoat nap Linh Dich
-    // khi nghi ngo da het (xem LinhDichRefiller).
-    private final Map<BlockPos, Integer> item1WaterAttempts = new HashMap<>();
-
     // Dieu khien viec di chuyen (Fly / Goto Baritone) truoc khi thuc hien 1 hanh dong. Xem TravelController.
     private final TravelController travel = new TravelController();
     // Tu dong hoa quy trinh nap Linh Dich (go lenh -> click GUI -> go so luong vao chat).
-    private final LinhDichRefiller refiller = new LinhDichRefiller();
-    // Tu dong hoa quy trinh nap Linh Dich (go lenh -> click GUI -> go so luong). Xem LinhDichRefiller.
     private final LinhDichRefiller refiller = new LinhDichRefiller();
 
     public AutoCropFarmer() {

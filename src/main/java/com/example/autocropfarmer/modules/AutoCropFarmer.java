@@ -1,6 +1,7 @@
 package com.example.autocropfarmer.modules;
 
 import com.example.autocropfarmer.AutoCropFarmerAddon;
+import com.example.autocropfarmer.util.LinhDichRefiller;
 import com.example.autocropfarmer.util.TravelController;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
@@ -232,6 +233,45 @@ public class AutoCropFarmer extends Module {
         .build()
     );
 
+    private final SettingGroup sgRefill = settings.createGroup("Auto Refill Linh Dich");
+
+    private final Setting<Boolean> autoRefillEnabled = sgRefill.add(new BoolSetting.Builder()
+        .name("auto-refill-enabled")
+        .description("Tu dong nap lai Linh Dich khi phat hien het (tuoi bang Item 1 that bai lien tuc), "
+            + "theo dung quy trinh: go lenh -> click o Linh Dich trong GUI -> go so luong vao chat.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<String> refillCommand = sgRefill.add(new StringSetting.Builder()
+        .name("refill-command")
+        .description("Lenh de mo GUI nap Linh Dich (co hoac khong co dau '/' deu duoc).")
+        .defaultValue("/linhdich")
+        .visible(autoRefillEnabled::get)
+        .build()
+    );
+
+    private final Setting<String> refillAmount = sgRefill.add(new StringSetting.Builder()
+        .name("refill-amount")
+        .description("So luong Linh Dich se go vao chat khi GUI hoi 'nhap so luong'. Nen de mot so that "
+            + "lon (vi du 2500000000) de nap day 1 lan, tranh phai nap lien tuc.")
+        .defaultValue("2500000000")
+        .visible(autoRefillEnabled::get)
+        .build()
+    );
+
+    private final Setting<Integer> refillTriggerFailures = sgRefill.add(new IntSetting.Builder()
+        .name("refill-trigger-failures")
+        .description("Sau bao nhieu lan tuoi bang Item 1 that bai LIEN TUC tai 1 vi tri thi coi nhu HET "
+            + "Linh Dich va tu dong kich hoat quy trinh nap.")
+        .defaultValue(5)
+        .range(1, 50)
+        .sliderMin(1)
+        .sliderMax(50)
+        .visible(autoRefillEnabled::get)
+        .build()
+    );
+
     private final SettingGroup sgDebug = settings.createGroup("Debug");
 
     private final Setting<Boolean> chatDebug = sgDebug.add(new BoolSetting.Builder()
@@ -313,9 +353,19 @@ public class AutoCropFarmer extends Module {
     // CHI danh cho debug/log: ghi nho loai block gan nhat tai moi vi tri de phat hien va log
     // moi lan block THAY DOI (giup xac dinh chinh xac ten block "da chin" thuc te tren server).
     private final Map<BlockPos, Block> lastSeenBlock = new HashMap<>();
+    // Dem so lan that bai lien tiep khi swap Item 1 de "tuoi" - qua nguong se tu dong kich hoat nap Linh Dich.
+    private final Map<BlockPos, Integer> item1WaterAttempts = new HashMap<>();
+
+    // Dem so lan that bai lien tiep khi tuoi bang Item 1 - dung de tu dong kich hoat nap Linh Dich
+    // khi nghi ngo da het (xem LinhDichRefiller).
+    private final Map<BlockPos, Integer> item1WaterAttempts = new HashMap<>();
 
     // Dieu khien viec di chuyen (Fly / Goto Baritone) truoc khi thuc hien 1 hanh dong. Xem TravelController.
     private final TravelController travel = new TravelController();
+    // Tu dong hoa quy trinh nap Linh Dich (go lenh -> click GUI -> go so luong vao chat).
+    private final LinhDichRefiller refiller = new LinhDichRefiller();
+    // Tu dong hoa quy trinh nap Linh Dich (go lenh -> click GUI -> go so luong). Xem LinhDichRefiller.
+    private final LinhDichRefiller refiller = new LinhDichRefiller();
 
     public AutoCropFarmer() {
         super(AutoCropFarmerAddon.CATEGORY, "auto-crop-farmer",
@@ -353,6 +403,7 @@ public class AutoCropFarmer extends Module {
         replantCooldownRemaining.clear();
         harvestAttempts.clear();
         replantAttempts.clear();
+        item1WaterAttempts.clear();
         lastSeenBlock.clear();
         taskIndex = 0;
         tickTimer = 0;
@@ -631,18 +682,43 @@ public class AutoCropFarmer extends Module {
      * Thuc hien hanh dong "tuoi/tac dong bang Item 1" thuc su (swap Item 1 + right-click UP) tai
      * "cropPos" - duoc goi boi TravelController sau khi da toi vi tri (hoac ngay lap tuc neu NORMAL).
      */
-    private void doWaterAction(BlockPos cropPos) {
-        if (swapToItemByName(item1Name)) {
-            boolean success = interactBlock(cropPos, Direction.UP);
-            log("[MONITORING] cropPos=" + cropPos + " interactBlock(UP) voi Item 1 -> "
-                + (success ? "THANH CONG" : "THAT BAI"));
-        } else {
+    private void doWaterAction(BlockPos base, BlockPos cropPos) {
+        if (!swapToItemByName(item1Name)) {
             warning("Khong tim thay Item 1 (" + item1Name + ") trong hotbar.");
             log("[MONITORING] cropPos=" + cropPos + " - KHONG swap duoc Item 1 (\"" + item1Name + "\").");
+            return;
+        }
+
+        boolean success = interactBlock(cropPos, Direction.UP);
+        int attempts = item1WaterAttempts.getOrDefault(base, 0) + 1;
+        log("[MONITORING] cropPos=" + cropPos + " interactBlock(UP) voi Item 1 -> "
+            + (success ? "THANH CONG" : "THAT BAI (lan " + attempts + ")"));
+
+        if (success) {
+            item1WaterAttempts.remove(base);
+            return;
+        }
+
+        item1WaterAttempts.put(base, attempts);
+
+        // That bai lien tuc qua nguong cau hinh -> nghi ngo da HET Linh Dich, tu dong kich hoat nap.
+        if (autoRefillEnabled.get() && attempts >= refillTriggerFailures.get() && !refiller.isBusy()) {
+            log("[MONITORING] base=" + base + " - That bai " + attempts + " lan lien tiep voi Item 1, nghi la "
+                + "het Linh Dich -> tu dong nap (" + refillCommand.get() + ").");
+            info("Nghi la het Linh Dich, dang tu dong nap...");
+            item1WaterAttempts.remove(base);
+            refiller.start(refillCommand.get());
         }
     }
 
     private void handleMonitoring() {
+        // Neu dang trong qua trinh nap Linh Dich (go lenh -> click GUI -> go so luong), uu tien xu ly
+        // no MOI TICK, tam dung toan bo hoat dong (tuoi/thu hoach/trong lai) cho den khi nap xong.
+        if (refiller.isBusy()) {
+            refiller.tick(mc, refillAmount.get());
+            return;
+        }
+
         // Neu dang trong qua trinh di chuyen (Fly/Goto) toi vi tri can xu ly, uu tien "lai"/kiem tra no
         // MOI TICK (khong bi gioi han boi monitor-interval).
         if (travel.isBusy()) {
@@ -759,8 +835,9 @@ public class AutoCropFarmer extends Module {
                     + " - Giá đỡ giáp khop cot X,Z tren PITCHER_CROP -> di chuyen (neu can) roi swap Item 1.");
 
                 BlockPos finalCropPos = cropPos;
+                BlockPos finalBase = base;
                 travel.start(approachMode.get(), cropPos.up(), flySpeed.get(), flyDelayTicks.get(),
-                    autoDisableFlyAfterAction.get(), gotoTimeoutTicks.get(), () -> doWaterAction(finalCropPos));
+                    autoDisableFlyAfterAction.get(), gotoTimeoutTicks.get(), () -> doWaterAction(finalBase, finalCropPos));
                 travel.tick(mc);
                 return; // Chi 1 hanh dong moi chu ky
             }

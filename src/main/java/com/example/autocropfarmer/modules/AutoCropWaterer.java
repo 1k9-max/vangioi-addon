@@ -1,6 +1,7 @@
 package com.example.autocropfarmer.modules;
 
 import com.example.autocropfarmer.AutoCropFarmerAddon;
+import com.example.autocropfarmer.util.LinhDichRefiller;
 import com.example.autocropfarmer.util.TravelController;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
@@ -66,6 +67,7 @@ public class AutoCropWaterer extends Module {
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgMovement = settings.createGroup("Movement (Fly / Goto)");
+    private final SettingGroup sgRefill = settings.createGroup("Auto Refill Linh Dich");
     private final SettingGroup sgRender = settings.createGroup("Render");
     private final SettingGroup sgDebug = settings.createGroup("Debug");
 
@@ -181,6 +183,43 @@ public class AutoCropWaterer extends Module {
         .build()
     );
 
+    private final Setting<Boolean> autoRefillEnabled = sgRefill.add(new BoolSetting.Builder()
+        .name("auto-refill-enabled")
+        .description("Tu dong nap lai Linh Dich khi phat hien het (tuoi that bai lien tuc), theo dung "
+            + "quy trinh: go lenh -> click o Linh Dich trong GUI -> go so luong vao chat.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<String> refillCommand = sgRefill.add(new StringSetting.Builder()
+        .name("refill-command")
+        .description("Lenh de mo GUI nap Linh Dich (co hoac khong co dau '/' deu duoc).")
+        .defaultValue("/linhdich")
+        .visible(autoRefillEnabled::get)
+        .build()
+    );
+
+    private final Setting<String> refillAmount = sgRefill.add(new StringSetting.Builder()
+        .name("refill-amount")
+        .description("So luong Linh Dich se go vao chat khi GUI hoi 'nhap so luong'. Nen de mot so that "
+            + "lon (vi du 2500000000) de nap day 1 lan, tranh phai nap lien tuc.")
+        .defaultValue("2500000000")
+        .visible(autoRefillEnabled::get)
+        .build()
+    );
+
+    private final Setting<Integer> refillTriggerFailures = sgRefill.add(new IntSetting.Builder()
+        .name("refill-trigger-failures")
+        .description("Sau bao nhieu lan tuoi that bai LIEN TUC tai 1 vi tri thi coi nhu HET Linh Dich va "
+            + "tu dong kich hoat quy trinh nap (nen de nho hon 'max-water-attempts').")
+        .defaultValue(5)
+        .range(1, 50)
+        .sliderMin(1)
+        .sliderMax(50)
+        .visible(autoRefillEnabled::get)
+        .build()
+    );
+
     private final Setting<ShapeMode> shapeMode = sgRender.add(new EnumSetting.Builder<ShapeMode>()
         .name("shape-mode")
         .description("Kieu render cua vung 3D.")
@@ -227,6 +266,7 @@ public class AutoCropWaterer extends Module {
     private final Map<BlockPos, Integer> waterAttempts = new HashMap<>();
 
     private final TravelController travel = new TravelController();
+    private final LinhDichRefiller refiller = new LinhDichRefiller();
 
     public AutoCropWaterer() {
         super(AutoCropFarmerAddon.CATEGORY, "auto-crop-waterer",
@@ -375,6 +415,13 @@ public class AutoCropWaterer extends Module {
         if (mc.player == null || mc.world == null) return;
         if (state != State.MONITORING) return;
 
+        // Neu dang trong qua trinh nap Linh Dich (go lenh -> click GUI -> go so luong), uu tien xu ly
+        // no MOI TICK, tam dung toan bo hoat dong tuoi cho den khi nap xong.
+        if (refiller.isBusy()) {
+            refiller.tick(mc, refillAmount.get());
+            return;
+        }
+
         // Neu dang trong qua trinh di chuyen (Fly/Goto) toi vi tri can tuoi, uu tien "lai"/kiem tra no
         // MOI TICK (khong bi gioi han boi monitor-interval).
         if (travel.isBusy()) {
@@ -474,6 +521,16 @@ public class AutoCropWaterer extends Module {
             pendingWater.remove(base);
             waterAttempts.remove(base);
             waterCooldownRemaining.put(base, wateredCooldownCycles.get());
+            return;
+        }
+
+        // That bai lien tuc qua nguong cau hinh -> nghi ngo da HET Linh Dich, tu dong kich hoat nap.
+        if (autoRefillEnabled.get() && attempts >= refillTriggerFailures.get() && !refiller.isBusy()) {
+            log("[MONITORING] base=" + base + " - That bai " + attempts + " lan lien tiep, nghi la het "
+                + "Linh Dich -> tu dong nap (" + refillCommand.get() + ").");
+            info("Nghi la het Linh Dich, dang tu dong nap...");
+            waterAttempts.remove(base); // reset dem, se thu lai tu dau sau khi nap xong
+            refiller.start(refillCommand.get());
         }
     }
 

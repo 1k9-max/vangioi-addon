@@ -3,6 +3,7 @@ package com.example.autocropfarmer.modules;
 import com.example.autocropfarmer.AutoCropFarmerAddon;
 import com.example.autocropfarmer.util.LinhDichRefiller;
 import com.example.autocropfarmer.util.TravelController;
+import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
@@ -183,11 +184,25 @@ public class AutoCropWaterer extends Module {
         .build()
     );
 
+    public enum RefillMode {
+        Smart, Normal
+    }
+
     private final Setting<Boolean> autoRefillEnabled = sgRefill.add(new BoolSetting.Builder()
         .name("auto-refill-enabled")
-        .description("Tu dong nap lai Linh Dich khi phat hien het (tuoi that bai lien tuc), theo dung "
-            + "quy trinh: go lenh -> click o Linh Dich trong GUI -> go so luong vao chat.")
+        .description("Tu dong nap lai Linh Dich, theo dung quy trinh: go lenh -> click o Linh Dich "
+            + "trong GUI -> cho server hoi -> go so luong vao chat.")
         .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<RefillMode> refillMode = sgRefill.add(new EnumSetting.Builder<RefillMode>()
+        .name("refill-mode")
+        .description("Smart: CHI nap khi server thuc su bao \"khong du linh dich\" (chinh xac, khong nap "
+            + "thua - tranh loi tuoi that bai gia do ActionResult khong dang tin). Normal: chu dong nap 1 "
+            + "lan SAU MOI LAN vi tri hoan tat thu hoach (truoc khi trong lai), bat ke con Linh Dich hay khong.")
+        .defaultValue(RefillMode.Smart)
+        .visible(autoRefillEnabled::get)
         .build()
     );
 
@@ -204,18 +219,6 @@ public class AutoCropWaterer extends Module {
         .description("So luong Linh Dich se go vao chat khi GUI hoi 'nhap so luong'. Nen de mot so that "
             + "lon (vi du 2500000000) de nap day 1 lan, tranh phai nap lien tuc.")
         .defaultValue("2500000000")
-        .visible(autoRefillEnabled::get)
-        .build()
-    );
-
-    private final Setting<Integer> refillTriggerFailures = sgRefill.add(new IntSetting.Builder()
-        .name("refill-trigger-failures")
-        .description("Sau bao nhieu lan tuoi that bai LIEN TUC tai 1 vi tri thi coi nhu HET Linh Dich va "
-            + "tu dong kich hoat quy trinh nap (nen de nho hon 'max-water-attempts').")
-        .defaultValue(5)
-        .range(1, 50)
-        .sliderMin(1)
-        .sliderMax(50)
         .visible(autoRefillEnabled::get)
         .build()
     );
@@ -315,6 +318,44 @@ public class AutoCropWaterer extends Module {
         } catch (java.io.IOException e) {
             AutoCropFarmerAddon.LOG.warn("[AutoCropWaterer] Khong the ghi debug log ra file: " + e.getMessage());
         }
+    }
+
+    // ================== Chat handling (Refill Linh Dich - Smart mode trigger + forward prompt) ==================
+
+    @EventHandler
+    private void onReceiveMessage(ReceiveMessageEvent event) {
+        if (mc.player == null) return;
+        String raw = event.getMessage().getString();
+        if (raw == null || raw.isBlank()) return;
+
+        // Neu dang trong 1 luot nap, chuyen tiep MOI dong chat cho refiller de no tu quyet dinh co
+        // phai la dong "nhap so luong" hay khong (xem LinhDichRefiller.onChatMessage()).
+        if (refiller.isBusy()) {
+            refiller.onChatMessage(raw);
+        }
+
+        // Che do Smart: CHI kich hoat nap khi server bao dinh danh la het Linh Dich - chinh xac 100%,
+        // khong doan qua so lan that bai (ActionResult tu interactBlock KHONG dang tin cho hanh dong
+        // nay, tung xac nhan la co the bao THAT BAI ngay ca khi thuc te da thanh cong).
+        if (autoRefillEnabled.get() && refillMode.get() == RefillMode.Smart) {
+            String lower = raw.toLowerCase(java.util.Locale.ROOT);
+            if (lower.contains("không đủ linh dịch") || lower.contains("khong du linh dich")) {
+                triggerRefill("Server bao het Linh Dich");
+            }
+        }
+    }
+
+    /**
+     * Kich hoat 1 luot nap Linh Dich neu dang duoc phep (autoRefillEnabled) va chua co luot nao dang
+     * chay. Dung chung cho ca 2 truong hop kich hoat: (a) SMART - phat hien dong chat "khong du linh
+     * dich" that su tu server; (b) NORMAL - chu dong nap sau moi lan tuoi xong 1 vi tri.
+     */
+    private void triggerRefill(String reason) {
+        if (!autoRefillEnabled.get() || refiller.isBusy()) return;
+
+        log("[Refill] " + reason + " -> tu dong nap (" + refillCommand.get() + ").");
+        info(reason + " - dang tu dong nap Linh Dich...");
+        refiller.start(refillCommand.get(), refillAmount.get());
     }
 
     // ================== Packet handling ==================
@@ -418,7 +459,7 @@ public class AutoCropWaterer extends Module {
         // Neu dang trong qua trinh nap Linh Dich (go lenh -> click GUI -> go so luong), uu tien xu ly
         // no MOI TICK, tam dung toan bo hoat dong tuoi cho den khi nap xong.
         if (refiller.isBusy()) {
-            refiller.tick(mc, refillAmount.get());
+            refiller.tick(mc);
             return;
         }
 
@@ -521,17 +562,19 @@ public class AutoCropWaterer extends Module {
             pendingWater.remove(base);
             waterAttempts.remove(base);
             waterCooldownRemaining.put(base, wateredCooldownCycles.get());
-            return;
+
+            // Che do Normal: chu dong nap sau MOI LAN tuoi thanh cong, bat ke con Linh Dich hay khong -
+            // KHONG dua vao ActionResult that bai lien tuc (khong dang tin cho hanh dong nay).
+            if (autoRefillEnabled.get() && refillMode.get() == RefillMode.Normal) {
+                triggerRefill("Che do Normal - chu dong nap sau khi tuoi");
+            }
         }
 
-        // That bai lien tuc qua nguong cau hinh -> nghi ngo da HET Linh Dich, tu dong kich hoat nap.
-        if (autoRefillEnabled.get() && attempts >= refillTriggerFailures.get() && !refiller.isBusy()) {
-            log("[MONITORING] base=" + base + " - That bai " + attempts + " lan lien tiep, nghi la het "
-                + "Linh Dich -> tu dong nap (" + refillCommand.get() + ").");
-            info("Nghi la het Linh Dich, dang tu dong nap...");
-            waterAttempts.remove(base); // reset dem, se thu lai tu dau sau khi nap xong
-            refiller.start(refillCommand.get());
-        }
+        // LUU Y: KHONG con kich hoat nap dua tren so lan that bai lien tuc nua - ActionResult tra ve
+        // tu interactBlock() cho hanh dong nay tung xac nhan la KHONG dang tin (co the bao THAT BAI
+        // ngay ca khi server da xu ly thanh cong that su), gay nap nham lien tuc du con du Linh Dich.
+        // Che do Smart dung tin hieu chinh xac hon: dong chat "khong du linh dich" that su tu server
+        // (xem onReceiveMessage()).
     }
 
     private Map<Long, String> collectHiddenArmorStandInfo() {

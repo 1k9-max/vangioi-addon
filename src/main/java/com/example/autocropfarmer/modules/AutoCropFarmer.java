@@ -348,7 +348,7 @@ public class AutoCropFarmer extends Module {
     // Dang cho xac nhan vi tri hien tai (taskIndex) da thuc su duoc trong xong chua (xem handleAutoPlanting())
     private boolean awaitingPlantConfirm = false;
 
-    // Vi tri da phat hien "bien doi" (co the la dau hieu san sang thu hoach), dang cho click tay khong
+    // Vi tri da phat hien "bien doi" (co single the la dau hieu san sang thu hoach), dang cho click tay khong
     private final Set<BlockPos> pendingHarvest = new HashSet<>();
     // Vi tri da thu hoach xong (cropPos tro thanh air/khac), dang cho trong lai
     private final Set<BlockPos> pendingReplant = new HashSet<>();
@@ -483,8 +483,7 @@ public class AutoCropFarmer extends Module {
         // khong doan qua so lan that bai (tranh nap thua khi con du Linh Dich nhung vi ly do khac ma
         // 1 lan tuoi khong thanh cong, vi du "cay dang khoe manh, khong can tuoi").
         if (autoRefillEnabled.get() && refillMode.get() == RefillMode.Smart) {
-            String lower = raw.toLowerCase(java.util.Locale.ROOT);
-            if (lower.contains("không đủ linh dịch") || lower.contains("khong du linh dich")) {
+            if (LinhDichRefiller.isOutOfLinhDichMessage(raw)) {
                 triggerRefill("Server bao het Linh Dich");
             }
         }
@@ -807,7 +806,7 @@ public class AutoCropFarmer extends Module {
             Block previousBlock = lastSeenBlock.get(base);
             if (previousBlock != currentBlock) {
                 if (previousBlock == Blocks.PITCHER_CROP) {
-                    chatDebugMessage("PITCHER_CROP bi thay the tai " + cropPos + ": "
+                    chatDebugMessage("PITCHER_CROP bi thay extreme tai " + cropPos + ": "
                         + Registries.BLOCK.getId(previousBlock) + " -> " + Registries.BLOCK.getId(currentBlock));
                 }
 

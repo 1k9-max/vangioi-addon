@@ -338,8 +338,7 @@ public class AutoCropWaterer extends Module {
         // khong doan qua so lan that bai (ActionResult tu interactBlock KHONG dang tin cho hanh dong
         // nay, tung xac nhan la co the bao THAT BAI ngay ca khi thuc te da thanh cong).
         if (autoRefillEnabled.get() && refillMode.get() == RefillMode.Smart) {
-            String lower = raw.toLowerCase(java.util.Locale.ROOT);
-            if (lower.contains("không đủ linh dịch") || lower.contains("khong du linh dich")) {
+            if (LinhDichRefiller.isOutOfLinhDichMessage(raw)) {
                 triggerRefill("Server bao het Linh Dich");
             }
         }

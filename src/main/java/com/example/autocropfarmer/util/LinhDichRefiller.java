@@ -180,6 +180,12 @@ public class LinhDichRefiller {
                 // KHONG reset()/coi la xong o day - cho onChatMessage() bat dong xac nhan "da truyen"
                 // (hoac dong bao loi/huy) truoc khi ket thuc, tranh bao thanh cong gia khi server tu choi.
             }
+            case WAITING_PROMPT, WAITING_CONFIRM -> {
+                // Khong lam gi ca - dang cho onChatMessage() bao hieu (prompt "nhap so luong" hoac
+                // xac nhan "da truyen"). Neu qua lau ma khong thay gi, timeoutTicks o dau ham se tu
+                // reset() va bao THAT BAI - KHONG duoc de switch nay roi vao default va tu reset som,
+                // neu khong ca flow se bi huy giua chung ngay khi waitTicks vua ve 0.
+            }
             default -> {
                 reset("");
                 return true;

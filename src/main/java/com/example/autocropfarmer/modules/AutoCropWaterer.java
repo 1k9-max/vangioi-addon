@@ -92,6 +92,20 @@ public class AutoCropWaterer extends Module {
         .build()
     );
 
+    private final Setting<Integer> waterConfirmDelayCycles = sgGeneral.add(new IntSetting.Builder()
+        .name("water-confirm-delay-cycles")
+        .description("Sau khi gui hanh dong tuoi (interactBlock), cho bao nhieu CHU KY MONITORING "
+            + "(moi chu ky cach nhau 'monitor-interval-ticks') roi moi kiem tra Giá đỡ giáp bao 'can tuoi' "
+            + "(vi du chua linh dich) co con xuat hien hay khong, de XAC NHAN tuoi thanh cong that su - "
+            + "KHONG dua vao ket qua tra ve tuc thi cua interactBlock() vi tin hieu nay KHONG dang tin cho "
+            + "hanh dong tuoi (co the bao THAT BAI ngay ca khi da thanh cong).")
+        .defaultValue(3)
+        .range(1, 100)
+        .sliderMin(1)
+        .sliderMax(30)
+        .build()
+    );
+
     private final Setting<Integer> wateredCooldownCycles = sgGeneral.add(new IntSetting.Builder()
         .name("watered-cooldown-cycles")
         .description("So chu ky MONITORING can cho SAU KHI tuoi xong 1 vi tri, truoc khi vi tri do co the "
@@ -267,6 +281,10 @@ public class AutoCropWaterer extends Module {
     private final Set<BlockPos> pendingWater = new HashSet<>();
     private final Map<BlockPos, Integer> waterCooldownRemaining = new HashMap<>();
     private final Map<BlockPos, Integer> waterAttempts = new HashMap<>();
+    // Cac vi tri DA gui hanh dong tuoi (interactBlock) va dang CHO XAC NHAN THAT SU qua Giá đỡ giáp -
+    // KHONG dua vao ket qua tra ve tuc thi cua interactBlock() (khong dang tin cho hanh dong nay).
+    private final Set<BlockPos> waterAwaitingConfirm = new HashSet<>();
+    private final Map<BlockPos, Integer> waterConfirmTicksRemaining = new HashMap<>();
 
     private final TravelController travel = new TravelController();
     private final LinhDichRefiller refiller = new LinhDichRefiller();
@@ -296,6 +314,8 @@ public class AutoCropWaterer extends Module {
         pendingWater.clear();
         waterCooldownRemaining.clear();
         waterAttempts.clear();
+        waterAwaitingConfirm.clear();
+        waterConfirmTicksRemaining.clear();
         tickTimer = 0;
 
         info("Da reset. Vui long cam item dung de tuoi va right-click vao khong khi hoac block.");
@@ -487,6 +507,46 @@ public class AutoCropWaterer extends Module {
 
         String keyword = needWaterKeyword.get().trim().toLowerCase();
 
+        // ===== Giai doan 0: XAC NHAN cac vi tri dang cho sau khi da gui hanh dong tuoi =====
+        // KHONG dua vao ket qua tra ve tuc thi cua interactBlock() (xem doWaterAction()) - thay vao do,
+        // cho "water-confirm-delay-cycles" roi kiem tra THAT SU xem Giá đỡ giáp bao "can tuoi" o cot nay
+        // co CON xuat hien hay khong (dung hiddenStandInfo vua quet o dau ham nay). Neu KHONG con nua ->
+        // tuoi da thanh cong that su (du interactBlock co the da bao THAT BAI luc gui). Neu VAN CON ->
+        // that su chua thanh cong (hoac chua kip cap nhat), cho quay lai pendingWater de thu lai.
+        if (!waterAwaitingConfirm.isEmpty()) {
+            for (BlockPos base : new ArrayList<>(waterAwaitingConfirm)) {
+                int remaining = waterConfirmTicksRemaining.getOrDefault(base, 0) - 1;
+                if (remaining > 0) {
+                    waterConfirmTicksRemaining.put(base, remaining);
+                    continue;
+                }
+
+                BlockPos cropPos = base.up();
+                String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
+                boolean stillNeedsMatchingKeyword = standText != null
+                    && (keyword.isEmpty() || standText.toLowerCase().contains(keyword));
+
+                waterAwaitingConfirm.remove(base);
+                waterConfirmTicksRemaining.remove(base);
+
+                if (!stillNeedsMatchingKeyword) {
+                    log("[MONITORING] base=" + base + " cropPos=" + cropPos
+                        + " - XAC NHAN tuoi THANH CONG (Giá đỡ giáp 'can tuoi' khong con xuat hien nua).");
+                    waterAttempts.remove(base);
+                    waterCooldownRemaining.put(base, wateredCooldownCycles.get());
+
+                    // Che do Normal: chu dong nap sau MOI LAN tuoi XAC NHAN thanh cong that su.
+                    if (autoRefillEnabled.get() && refillMode.get() == RefillMode.Normal) {
+                        triggerRefill("Che do Normal - chu dong nap sau khi tuoi (da xac nhan)");
+                    }
+                } else {
+                    log("[MONITORING] base=" + base + " cropPos=" + cropPos
+                        + " - CHUA xac nhan duoc (Giá đỡ giáp 'can tuoi' van con) -> cho vao pendingWater de thu lai.");
+                    pendingWater.add(base); // quay lai hang doi, se duoc xu ly o Giai doan 2 ben duoi
+                }
+            }
+        }
+
         // ===== Giai doan 1: quet & cap nhat pendingWater (chi doc, khong gui packet) =====
         // Dung DUNG logic da duoc xac nhan hoat dong that trong AutoCropFarmer: CHI CAN co Giá đỡ
         // giáp an xuat hien dung cot X,Z la coi nhu "can tuoi", KHONG bat buoc phai khop text nao ca
@@ -498,6 +558,7 @@ public class AutoCropWaterer extends Module {
 
             if (!waterCooldownRemaining.isEmpty() && waterCooldownRemaining.containsKey(base)) continue;
             if (pendingWater.contains(base)) continue;
+            if (waterAwaitingConfirm.contains(base)) continue; // dang cho xac nhan, dung dam vao lai
 
             String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
             if (standText == null) continue; // Khong co Giá đỡ giáp o cot nay -> chua can tuoi
@@ -525,7 +586,7 @@ public class AutoCropWaterer extends Module {
             int attempts = waterAttempts.getOrDefault(base, 0) + 1;
 
             if (attempts > maxWaterAttempts.get()) {
-                warning("Bo qua vi tri " + base + " sau " + (attempts - 1) + " lan tuoi that bai.");
+                warning("Bo qua vi tri " + base + " sau " + (attempts - 1) + " lan tuoi khong xac nhan duoc.");
                 waterAttempts.remove(base);
                 pendingWater.remove(base);
                 waterCooldownRemaining.put(base, wateredCooldownCycles.get());
@@ -547,33 +608,37 @@ public class AutoCropWaterer extends Module {
     /**
      * Thuc hien hanh dong tuoi thuc su (swap item tuoi + right-click UP) tai "cropPos" - duoc goi boi
      * TravelController sau khi da toi vi tri (hoac ngay lap tuc neu approach-mode = NORMAL).
+     *
+     * QUAN TRONG: ket qua tra ve tuc thi cua interactBlock() (ActionResult) KHONG dang tin cho hanh dong
+     * tuoi nay - no co the bao THAT BAI ngay ca khi server da xu ly thanh cong that su. Vi vay ham nay
+     * CHI GUI hanh dong roi chuyen vi tri sang trang thai "cho xac nhan" (waterAwaitingConfirm) - viec
+     * xac dinh thanh cong/that bai THAT SU duoc lam o Giai doan 0 cua handleMonitoring(), dua tren viec
+     * Giá đỡ giáp bao "can tuoi" co con xuat hien o cot do hay khong sau 1 khoang cho ("water-confirm-
+     * delay-ticks") - giong nguyen tac AutoCropFarmer dung BlockState de xac nhan trong cay thay vi tin
+     * ActionResult.
      */
     private void doWaterAction(BlockPos base, BlockPos cropPos, int attempts) {
+        pendingWater.remove(base);
+
         if (!swapToItemByName(waterItemName)) {
             warning("Khong tim thay item tuoi (" + waterItemName + ") trong hotbar.");
-            log("[MONITORING] base=" + base + " - KHONG swap duoc item tuoi.");
+            log("[MONITORING] base=" + base + " - KHONG swap duoc item tuoi -> cho vao pendingWater de thu lai.");
+            pendingWater.add(base); // chua gui duoc hanh dong nao ca, giu nguyen o hang doi de thu lai
             return;
         }
 
-        boolean success = interactBlock(cropPos, Direction.UP);
-        log("[MONITORING] base=" + base + " interactBlock(UP) -> "
-            + (success ? "THANH CONG" : "THAT BAI (lan " + attempts + "/" + maxWaterAttempts.get() + ")"));
+        boolean sentResult = interactBlock(cropPos, Direction.UP);
+        log("[MONITORING] base=" + base + " interactBlock(UP) -> DA GUI (ket qua tuc thi=" + sentResult
+            + ", KHONG dung de ket luan thanh/bai - se xac nhan qua Giá đỡ giáp sau "
+            + waterConfirmDelayCycles.get() + " chu ky) (lan " + attempts + "/" + maxWaterAttempts.get() + ")");
 
-        if (success) {
-            pendingWater.remove(base);
-            waterAttempts.remove(base);
-            waterCooldownRemaining.put(base, wateredCooldownCycles.get());
-
-            // Che do Normal: chu dong nap sau MOI LAN tuoi thanh cong, bat ke con Linh Dich hay khong -
-            // KHONG dua vao ActionResult that bai lien tuc (khong dang tin cho hanh dong nay).
-            if (autoRefillEnabled.get() && refillMode.get() == RefillMode.Normal) {
-                triggerRefill("Che do Normal - chu dong nap sau khi tuoi");
-            }
-        }
+        waterAwaitingConfirm.add(base);
+        waterConfirmTicksRemaining.put(base, waterConfirmDelayCycles.get());
 
         // LUU Y: KHONG con kich hoat nap dua tren so lan that bai lien tuc nua - ActionResult tra ve
         // tu interactBlock() cho hanh dong nay tung xac nhan la KHONG dang tin (co the bao THAT BAI
         // ngay ca khi server da xu ly thanh cong that su), gay nap nham lien tuc du con du Linh Dich.
+        // Che do Normal gio kich hoat o Giai doan 0 (sau khi da XAC NHAN that su tuoi thanh cong).
         // Che do Smart dung tin hieu chinh xac hon: dong chat "khong du linh dich" that su tu server
         // (xem onReceiveMessage()).
     }

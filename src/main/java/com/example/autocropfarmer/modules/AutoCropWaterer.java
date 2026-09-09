@@ -479,9 +479,11 @@ public class AutoCropWaterer extends Module {
     private void handleMonitoring() {
         Map<Long, String> hiddenStandInfo = collectHiddenArmorStandInfo();
 
-        if (!hiddenStandInfo.isEmpty()) {
-            log("[MONITORING] Tim thay " + hiddenStandInfo.size() + " cot X,Z co Giá đỡ giáp an.");
-        }
+        // LUON log 1 dong tom tat moi chu ky (KHONG con gate boi isEmpty() nhu truoc) - de nguoi dung
+        // co the xac nhan module THUC SU dang chay va biet chinh xac dang tim thay bao nhieu Giá đỡ
+        // giáp an (ke ca 0) thay vi im lang hoan toan khi khong tim thay gi, gay cam giac "khong hoat dong".
+        log("[MONITORING] Chu ky quet: area=" + area.size() + " vi tri, tim thay " + hiddenStandInfo.size()
+            + " cot X,Z co Giá đỡ giáp an (invisible).");
 
         String keyword = needWaterKeyword.get().trim().toLowerCase();
 
@@ -595,6 +597,30 @@ public class AutoCropWaterer extends Module {
             ArmorStandEntity::isInvisible
         );
 
+        // CHAN DOAN: neu khong tim thay Giá đỡ giáp NAO ca (invisible=0), kiem tra THEM xem co Giá đỡ
+        // giáp nao trong searchBox du KHONG invisible hay khong - giup phan biet 2 truong hop: (a) server
+        // hoan toan KHONG dat Giá đỡ giáp nao o day (searchBox/toa do sai, hoac server dung co che khac
+        // khong phai armor stand de bao "can tuoi"), hay (b) CO armor stand nhung KHONG duoc flag invisible
+        // (vi du server dung Marker armor stand/ao giap trong suot khac co che voi PITCHER_CROP).
+        if (stands.isEmpty()) {
+            List<ArmorStandEntity> allStandsIgnoreInvisible = mc.world.getEntitiesByClass(
+                ArmorStandEntity.class, searchBox, stand -> true
+            );
+            if (!allStandsIgnoreInvisible.isEmpty()) {
+                log("[MONITORING][DEBUG] KHONG tim thay Giá đỡ giáp INVISIBLE nao, nhung CO "
+                    + allStandsIgnoreInvisible.size() + " Giá đỡ giáp KHONG invisible trong searchBox ("
+                    + "y=" + y + " +-" + vRange + ") -> co the server dung co che khac invisible-flag de an "
+                    + "Giá đỡ giáp cho cay nay (vi du Marker/armor rong), hoac day khong phai tin hieu 'can tuoi' "
+                    + "cho loai cay nay. Vi du toa do 1 cai: " + describeStand(allStandsIgnoreInvisible.get(0)));
+            } else {
+                log("[MONITORING][DEBUG] KHONG tim thay Giá đỡ giáp nao (invisible hay khong) trong searchBox "
+                    + "(x=" + minX + ".." + maxX + ", y=" + (y - vRange) + ".." + (y + vRange)
+                    + ", z=" + minZ + ".." + maxZ + "). Kiem tra lai: pos1/pos2 co dung do cao cay khong, "
+                    + "'armor-stand-vertical-range' co du lon khong, va server co thuc su dung Giá đỡ giáp "
+                    + "de bao 'can tuoi' cho loai cay nay hay khong (co the day khong phai co che dung).");
+            }
+        }
+
         for (ArmorStandEntity stand : stands) {
             int sx = (int) Math.floor(stand.getX());
             int sz = (int) Math.floor(stand.getZ());
@@ -605,6 +631,12 @@ public class AutoCropWaterer extends Module {
         }
 
         return info;
+    }
+
+    private String describeStand(ArmorStandEntity stand) {
+        String text = stand.hasCustomName() ? stand.getCustomName().getString() : "(khong co ten)";
+        return "(" + (int) Math.floor(stand.getX()) + ", " + (int) Math.floor(stand.getY()) + ", "
+            + (int) Math.floor(stand.getZ()) + ") ten=\"" + text + "\"";
     }
 
     private long packXZ(int x, int z) {

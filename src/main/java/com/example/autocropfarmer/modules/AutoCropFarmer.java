@@ -275,6 +275,21 @@ public class AutoCropFarmer extends Module {
         .build()
     );
 
+    private final Setting<Integer> refillCooldownSeconds = sgRefill.add(new IntSetting.Builder()
+        .name("refill-cooldown-seconds")
+        .description("Sau khi 1 luot nap Linh Dich VUA KET THUC (thanh cong hay that bai deu tinh), khoa "
+            + "hoan toan viec tu dong kich hoat mot luot nap moi trong it nhat bao nhieu giay - tranh truong "
+            + "hop GUI nap bi mo lai gan nhu ngay lap tuc (vi du do 1 dong chat 'het linh dich' khac den tro "
+            + "sau khi vua nap xong, truoc khi hanh dong tuoi moi kip xac nhan la da du Linh Dich). Dat 0 de "
+            + "tat han che nay (hanh vi cu).")
+        .defaultValue(60)
+        .range(0, 600)
+        .sliderMin(0)
+        .sliderMax(300)
+        .visible(autoRefillEnabled::get)
+        .build()
+    );
+
     private final Setting<Integer> maxCycles = sgGeneral.add(new IntSetting.Builder()
         .name("max-cycles")
         .description("So vong (trong + thu hoach) toi da se chay TRUOC KHI TU DONG TAT module. Vi du dat "
@@ -371,7 +386,17 @@ public class AutoCropFarmer extends Module {
     // tu server "khong du linh dich", xem onReceiveMessage() va triggerRefill()).
 
     // So vong (trong + thu hoach) da hoan tat - dung cho "max-cycles" de tu dong tat module sau du so vong.
+    // LUU Y: "1 vong" = TOAN BO cac vi tri trong area da hoan tat xac nhan trong-lai it nhat 1 lan trong
+    // vong hien tai (xem cyclesDoneThisRound/onCycleCompleted(BlockPos)) - KHONG PHAI moi lan 1 vi tri
+    // rieng le xac nhan trong lai xong, tranh tinh sai (tat module giua chung 1 vong, con thua/thieu vi tri).
     private int completedCycles = 0;
+    // Cac vi tri (base) DA hoan tat (thanh cong hoac bi bo qua vi vuot qua so lan thu) vong trong-lai
+    // hien tai. Khi tap hop nay phu het toan bo "area" thi moi tinh la xong "1 vong" (xem onCycleCompleted).
+    private final Set<BlockPos> cyclesDoneThisRound = new HashSet<>();
+
+    // Con lai bao nhieu tick nua truoc khi duoc phep tu dong kich hoat 1 luot nap Linh Dich moi, sau khi
+    // luot truoc VUA ket thuc (thanh cong hay that bai deu tinh) - xem "refill-cooldown-seconds".
+    private int refillCooldownTicksRemaining = 0;
 
     // Dieu khien viec di chuyen (Fly / Goto Baritone) truoc khi thuc hien 1 hanh dong. Xem TravelController.
     private final TravelController travel = new TravelController();
@@ -419,6 +444,8 @@ public class AutoCropFarmer extends Module {
         tickTimer = 0;
         awaitingPlantConfirm = false;
         completedCycles = 0;
+        cyclesDoneThisRound.clear();
+        refillCooldownTicksRemaining = 0;
 
         info("Da reset. Vui long cam Item 1 (item dung khi cay bien doi) va right-click vao khong khi hoac block.");
         info("Go .clear-farmer bat cu luc nao de reset lai tu dau.");
@@ -572,6 +599,9 @@ public class AutoCropFarmer extends Module {
      */
     private void computeArea() {
         area.clear();
+        // Vung moi -> "vong" cu (neu co) khong con y nghia gi nua, tranh completedCycles bi tinh sai
+        // dua tren mot tap hop vi tri da khac (vi du sau khi nguoi dung chon lai vung).
+        cyclesDoneThisRound.clear();
         if (pos1 == null || pos2 == null) return;
 
         int minX = Math.min(pos1.getX(), pos2.getX());
@@ -615,6 +645,10 @@ public class AutoCropFarmer extends Module {
     private void onTick(TickEvent.Post event) {
         if (mc.player == null || mc.world == null) return;
 
+        // Dem nguoc thoi gian khoa auto-refill (xem "refill-cooldown-seconds") - luon giam moi tick,
+        // bat ke module dang o trang thai nao, de khong bao gio bi "ket" > 0 mai.
+        if (refillCooldownTicksRemaining > 0) refillCooldownTicksRemaining--;
+
         switch (state) {
             case AUTO_PLANTING -> handleAutoPlanting();
             case MONITORING -> handleMonitoring();
@@ -623,6 +657,11 @@ public class AutoCropFarmer extends Module {
     }
 
     private void handleAutoPlanting() {
+        // Neu dang trong qua trinh nap Linh Dich, tam dung viec trong cay cho den khi nap xong - tranh
+        // truong hop GUI nap dang mo ma module van tiep tuc trong cay o cho khac cung luc (xem
+        // tickRefillerIfBusy()).
+        if (tickRefillerIfBusy()) return;
+
         // Neu dang trong qua trinh di chuyen (Fly/Goto) toi vi tri hien tai, uu tien "lai"/kiem tra no
         // MOI TICK (khong bi gioi han boi plantDelay - di chuyen can duoc cap nhat lien tuc).
         if (travel.isBusy()) {
@@ -649,13 +688,36 @@ public class AutoCropFarmer extends Module {
         tickTimer = 0;
 
         BlockPos target = area.get(taskIndex);
+        BlockPos cropPos = target.up();
+
+        // Truoc khi lam bat cu gi voi 1 vi tri MOI (chua tung gui hanh dong trong lan nao trong luot
+        // nay), kiem tra xem cropPos co con la air khong. Neu KHONG con la air - tuc la o do DA CO SAN
+        // 1 block (co the la: da tung duoc trong tu truoc, hoac bi vat can/block khac chan mat) - TU
+        // DONG BO QUA vi tri nay va chuyen sang vi tri ke tiep, thay vi cu gui interactBlock() lien tuc
+        // vao 1 o da co block roi khien server tu choi ("linh duoc chua truong thanh", v.v.) va bi ket
+        // spam log/that bai mai o do. CHI ap dung cho buoc TRONG (AUTO_PLANTING) - KHONG ap dung cho
+        // buoc TUOI (MONITORING/doWaterAction), vi luc tuoi cropPos LUON PHAI co san cay (khong phai air).
+        if (!awaitingPlantConfirm) {
+            BlockState existingState = mc.world.getBlockState(cropPos);
+            if (!existingState.isAir()) {
+                log("[AUTO_PLANTING] taskIndex=" + taskIndex + " target=" + target + " cropPos=" + cropPos
+                    + " - O NAY DA CO BLOCK (" + Registries.BLOCK.getId(existingState.getBlock())
+                    + ") tu truoc (da trong san hoac bi vat can chan) -> TU DONG BO QUA, sang vi tri ke tiep.");
+                taskIndex++;
+
+                if (taskIndex >= area.size() || taskIndex % 5 == 0) {
+                    info("Da trong " + taskIndex + "/" + area.size() + " vi tri.");
+                }
+                return;
+            }
+        }
 
         // Buoc xac nhan: sau khi da gui hanh dong trong o vi tri nay, KHONG chuyen sang o ke tiep ngay,
         // ma cho 1 chu ky (plantDelay) roi kiem tra xem cropPos co thuc su xuat hien block moi chua
         // (khong con la air nua). Chi khi xac nhan thanh cong moi tang taskIndex - tranh truong hop
         // client "tuong" da trong xong (ActionResult accepted) nhung server chua kip xu ly.
         if (awaitingPlantConfirm) {
-            BlockState confirmState = mc.world.getBlockState(target.up());
+            BlockState confirmState = mc.world.getBlockState(cropPos);
 
             if (!confirmState.isAir()) {
                 log("[AUTO_PLANTING] taskIndex=" + taskIndex + " target=" + target
@@ -676,7 +738,6 @@ public class AutoCropFarmer extends Module {
 
         // Bat dau (hoac thuc hien ngay neu approach-mode = NORMAL) di chuyen toi vi tri x,z cua o can
         // trong (y+1 phia tren cropPos), roi moi thuc su swap Item 2 + right-click.
-        BlockPos cropPos = target.up();
         travel.start(approachMode.get(), cropPos.up(), flySpeed.get(), flyDelayTicks.get(),
             autoDisableFlyAfterAction.get(), gotoTimeoutTicks.get(), () -> doPlantAction(target));
         travel.tick(mc); // xu ly ngay trong tick nay neu la NORMAL (giu nguyen do tre = 0 nhu truoc)
@@ -740,16 +801,57 @@ public class AutoCropFarmer extends Module {
     private void triggerRefill(String reason) {
         if (!autoRefillEnabled.get() || refiller.isBusy()) return;
 
+        if (refillCooldownTicksRemaining > 0) {
+            log("[Refill] " + reason + " -> BO QUA (dang trong thoi gian khoa sau luot nap truoc, con "
+                + (refillCooldownTicksRemaining / 20) + "s nua moi duoc phep nap lai).");
+            return;
+        }
+
         log("[Refill] " + reason + " -> tu dong nap (" + refillCommand.get() + ").");
         info(reason + " - dang tu dong nap Linh Dich...");
         refiller.start(refillCommand.get(), refillAmount.get());
     }
 
     /**
-     * Goi moi khi 1 vi tri hoan tat xong ca vong "thu hoach -> trong lai" (xac nhan replant thanh cong).
-     * Neu "max-cycles" > 0 va da dat du so vong, tu dong tat module.
+     * Neu refiller dang ban (dang trong 1 luot nap Linh Dich), tick no va tra ve true de ham goi (
+     * handleAutoPlanting()/handleMonitoring()) return ngay, tam dung MOI hanh dong khac (trong/tuoi/
+     * thu hoach) cho den khi nap xong - dung chung cho ca 2 trang thai AUTO_PLANTING va MONITORING,
+     * tranh truong hop GUI nap dang mo ma module van tiep tuc trong/tuoi o cho khac cung luc.
+     * Khi refiller VUA ket thuc luot nap (thanh cong hay that bai deu tinh), tu dong bat dau thoi gian
+     * khoa "refill-cooldown-seconds" truoc khi cho phep kich hoat 1 luot nap moi (xem triggerRefill()).
      */
-    private void onCycleCompleted() {
+    private boolean tickRefillerIfBusy() {
+        if (!refiller.isBusy()) return false;
+
+        boolean justFinished = refiller.tick(mc);
+        if (justFinished) {
+            int cooldownSeconds = refillCooldownSeconds.get();
+            refillCooldownTicksRemaining = cooldownSeconds * 20;
+            log("[Refill] Luot nap vua ket thuc (" + refiller.getStatus() + ") -> khoa auto-refill trong "
+                + cooldownSeconds + "s truoc khi cho phep kich hoat lai.");
+        }
+        return true;
+    }
+
+    /**
+     * Goi moi khi 1 vi tri "xong phan cua no" trong vong trong-lai hien tai - hoac vi da XAC NHAN
+     * trong lai thanh cong, HOAC vi da bi CHU DONG BO QUA sau khi vuot qua "max-replant-attempts" (xem
+     * cac noi goi ham nay trong handleMonitoring()). Chi khi TOAN BO cac vi tri trong "area" deu da
+     * goi ham nay it nhat 1 lan trong vong hien tai thi moi tinh la xong "1 vong" va tang completedCycles -
+     * tranh truong hop dem sai (vi du: 1 vai vi tri xong nhieu lan trong khi cac vi tri khac chua xong
+     * lan nao) khien module tu tat giua chung 1 vong that su, con thua vai vi tri chua duoc trong lai.
+     */
+    private void onCycleCompleted(BlockPos base) {
+        cyclesDoneThisRound.add(base);
+
+        if (area.isEmpty() || cyclesDoneThisRound.size() < area.size()) {
+            log("[MaxCycles] base=" + base + " - da xong phan cua no trong vong hien tai (" 
+                + cyclesDoneThisRound.size() + "/" + area.size() + " vi tri).");
+            return;
+        }
+
+        // Toan bo vi tri trong area da xong (thanh cong hoac bi bo qua) trong vong nay -> tinh la HET 1 VONG.
+        cyclesDoneThisRound.clear();
         completedCycles++;
 
         int max = maxCycles.get();
@@ -757,20 +859,18 @@ public class AutoCropFarmer extends Module {
 
         if (completedCycles >= max) {
             info("Da hoan tat " + completedCycles + "/" + max + " vong trong + thu hoach -> tu dong tat module.");
-            log("[MaxCycles] Da dat " + completedCycles + "/" + max + " vong -> tu dong tat (toggle off).");
+            log("[MaxCycles] Da dat " + completedCycles + "/" + max + " vong (toan bo " + area.size()
+                + " vi tri) -> tu dong tat (toggle off).");
             toggle();
         } else {
-            log("[MaxCycles] Hoan tat vong " + completedCycles + "/" + max + ".");
+            log("[MaxCycles] Hoan tat vong " + completedCycles + "/" + max + " (toan bo " + area.size() + " vi tri).");
         }
     }
 
     private void handleMonitoring() {
         // Neu dang trong qua trinh nap Linh Dich (go lenh -> click GUI -> go so luong), uu tien xu ly
         // no MOI TICK, tam dung toan bo hoat dong (tuoi/thu hoach/trong lai) cho den khi nap xong.
-        if (refiller.isBusy()) {
-            refiller.tick(mc);
-            return;
-        }
+        if (tickRefillerIfBusy()) return;
 
         // Neu dang trong qua trinh di chuyen (Fly/Goto) toi vi tri can xu ly, uu tien "lai"/kiem tra no
         // MOI TICK (khong bi gioi han boi monitor-interval).
@@ -957,7 +1057,7 @@ public class AutoCropFarmer extends Module {
                     replantAwaitingConfirm.remove(base);
                     pendingReplant.remove(base);
                     replantAttempts.remove(base);
-                    onCycleCompleted();
+                    onCycleCompleted(base);
                     return; // Chi 1 hanh dong/xac nhan moi chu ky
                 }
 
@@ -977,6 +1077,10 @@ public class AutoCropFarmer extends Module {
                 pendingReplant.remove(base);
                 replantAwaitingConfirm.remove(base);
                 replantCooldownRemaining.remove(base);
+                // Van tinh vi tri nay la "xong phan cua no" trong vong hien tai (du la bi bo qua) - neu
+                // khong, vi tri nay se khong bao gio duoc tinh va "1 vong" se khong bao gio hoan tat duoc,
+                // khien max-cycles khong bao gio kich hoat.
+                onCycleCompleted(base);
                 return; // Chi 1 hanh dong moi chu ky
             }
 

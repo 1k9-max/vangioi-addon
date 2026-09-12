@@ -2,6 +2,7 @@ package com.example.autocropfarmer.mixin;
 
 import com.example.autocropfarmer.modules.ChestDropAllButton;
 import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.ScreenHandlerProvider;
@@ -46,6 +47,16 @@ public abstract class ChestDropAllScreenMixin<T extends ScreenHandler> extends S
         if (module == null) return;
 
         ScreenHandler handler = getScreenHandler();
+
+        // DEBUG TAM THOI: in ra loai GUI that + module co dang bat khong, de xac dinh vi sao
+        // nut khong hien. XOA dong nay sau khi da xac dinh xong nguyen nhan.
+        if (handler != null) {
+            try {
+                ChatUtils.info("[DEBUG DropAll] screenType=" + handler.getType() + " | slots=" + handler.slots.size() + " | moduleActive=" + module.isActive());
+            } catch (Exception ignored) {
+            }
+        }
+
         if (!module.canShowButton(handler)) return;
 
         addDrawableChild(

@@ -10,6 +10,7 @@ import com.example.autocropfarmer.modules.AutoAcceptModule;
 import com.example.autocropfarmer.modules.AutoCropFarmer;
 import com.example.autocropfarmer.modules.AutoCropWaterer;
 import com.example.autocropfarmer.modules.AutoDropVanilla;
+import com.example.autocropfarmer.modules.ChestDropAllButton;
 import com.example.autocropfarmer.modules.AutoFarm;
 import com.example.autocropfarmer.modules.AutoFish;
 import com.example.autocropfarmer.modules.AutoWalkStraightModule;
@@ -51,6 +52,7 @@ public class AutoCropFarmerAddon extends MeteorAddon {
         Modules.get().add(new AutoAcceptModule());
         Modules.get().add(new AutoWalkStraightModule());
         Modules.get().add(new AutoDropVanilla());
+        Modules.get().add(new ChestDropAllButton());
 
         // Commands
         Commands.add(new ClearFarmerCommand());

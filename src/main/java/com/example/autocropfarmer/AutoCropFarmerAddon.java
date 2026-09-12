@@ -13,6 +13,9 @@ import com.example.autocropfarmer.modules.ChatAutoResponder;
 import com.example.autocropfarmer.modules.FlyGotoModule;
 import com.example.autocropfarmer.modules.FlyToPlacementModule;
 import com.example.autocropfarmer.modules.LinhThaoLocations;
+import com.example.autocropfarmer.commands.AddItemCommand;
+import com.example.autocropfarmer.commands.DelItemCommand;
+import com.example.autocropfarmer.modules.AutoDropVanilla;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -46,10 +49,13 @@ public class AutoCropFarmerAddon extends MeteorAddon {
         Modules.get().add(new FlyToPlacementModule());
         Modules.get().add(new AutoAcceptModule());
         Modules.get().add(new AutoWalkStraightModule());
+        Modules.get().add(new AutoDropVanilla());
 
         // Commands
         Commands.add(new ClearFarmerCommand());
         Commands.add(new ClearWatererCommand());
+        Commands.add(new AddItemCommand());
+        Commands.add(new DelItemCommand());
     }
 
     @Override

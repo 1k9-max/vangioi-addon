@@ -91,7 +91,7 @@ public class AutoDropVanilla extends Module {
     }
 
     private boolean isTargetItem(Item item) {
-        if (item == null || item == Item.AIR) return false;
+        if (item == null) return false;
         if (vanillaItems.get().contains(item)) return true;
         return CustomDropList.get().isEnabledFor(item);
     }

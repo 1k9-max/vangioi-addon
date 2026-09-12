@@ -35,6 +35,9 @@ public abstract class ChestDropAllScreenMixin<T extends ScreenHandler> extends S
     protected int y;
 
     @Shadow
+    protected int backgroundHeight;
+
+    @Shadow
     public abstract T getScreenHandler();
 
     protected ChestDropAllScreenMixin(Text title) {
@@ -48,11 +51,14 @@ public abstract class ChestDropAllScreenMixin<T extends ScreenHandler> extends S
 
         ScreenHandler handler = getScreenHandler();
 
-        // DEBUG TAM THOI: in ra loai GUI that + module co dang bat khong, de xac dinh vi sao
-        // nut khong hien. XOA dong nay sau khi da xac dinh xong nguyen nhan.
+        // DEBUG TAM THOI: in ra loai GUI that + module co dang bat khong + co duoc phep hien nut khong.
+        // XOA dong nay sau khi da xac nhan nut hien binh thuong.
         if (handler != null) {
             try {
-                ChatUtils.info("[DEBUG DropAll] screenType=" + handler.getType() + " | slots=" + handler.slots.size() + " | moduleActive=" + module.isActive());
+                ChatUtils.info("[DEBUG DropAll] slots=" + handler.slots.size()
+                    + " | moduleActive=" + module.isActive()
+                    + " | canShow=" + module.canShowButton(handler)
+                    + " | x=" + x + " y=" + y + " bgH=" + backgroundHeight);
             } catch (Exception ignored) {
             }
         }
@@ -61,8 +67,8 @@ public abstract class ChestDropAllScreenMixin<T extends ScreenHandler> extends S
 
         addDrawableChild(
             new ButtonWidget.Builder(Text.literal("Drop All"), button -> module.dropAll(handler))
-                .position(x, y - 44) // dat phia tren, tranh de len nut Steal/Dump cua InventoryTweaks (y - 22)
-                .size(60, 20)
+                .position(x, y + backgroundHeight + 4) // dat NGAY DUOI GUI - luon nam trong man hinh
+                .size(60, 20)                          // du GUI cao (ruong doi 6 hang) hay thap (furnace...)
                 .build()
         );
     }

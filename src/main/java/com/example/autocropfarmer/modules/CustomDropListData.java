@@ -6,6 +6,7 @@ import meteordevelopment.meteorclient.gui.utils.IScreenFactory;
 import meteordevelopment.meteorclient.utils.misc.ICopyable;
 import meteordevelopment.meteorclient.utils.misc.ISerializable;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -75,6 +76,26 @@ public class CustomDropListData implements ICopyable<CustomDropListData>, ISeria
         Identifier targetId = Registries.ITEM.getId(item);
         for (Entry e : entries) {
             if (e.enabled && e.itemId.equals(targetId.toString())) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Kiem tra 1 ItemStack cu the co khop voi 1 entry trong list custom khong.
+     * Khop khi CA HAI: cung item id (minecraft:xxx) VA cung ten hien thi that (getName().getString()).
+     * Nho vay chi item DUNG TEN da luu (vd: item da dat ten qua de ren "Do cu xin") moi bi drop,
+     * KHONG vut nham cac item cung loai (vd: minecraft:stone) nhung khong mang ten do.
+     */
+    public boolean isEnabledFor(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+
+        Identifier targetId = Registries.ITEM.getId(stack.getItem());
+        String displayName = stack.getName().getString();
+
+        for (Entry e : entries) {
+            if (!e.enabled) continue;
+            if (!e.itemId.equals(targetId.toString())) continue;
+            if (e.name != null && e.name.equals(displayName)) return true;
         }
         return false;
     }

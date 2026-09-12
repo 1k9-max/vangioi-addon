@@ -104,10 +104,10 @@ public class AutoDropVanilla extends Module {
         tickCounter = 0;
     }
 
-    private boolean isTargetItem(Item item) {
-        if (item == null) return false;
-        if (vanillaItems.get().contains(item)) return true;
-        return customItems.get().isEnabledFor(item);
+    private boolean isTargetItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        if (vanillaItems.get().contains(stack.getItem())) return true;
+        return customItems.get().isEnabledFor(stack); // so ca item id + ten hien thi that
     }
 
     /** Dung boi cac command .additem/.delitem/.itemlist de thao tac chung 1 du lieu voi GUI. */
@@ -150,7 +150,7 @@ public class AutoDropVanilla extends Module {
 
     private void dropIfTarget(ItemStack stack, int index, boolean isPlayerInventoryIndex) {
         if (stack.isEmpty()) return;
-        if (!isTargetItem(stack.getItem())) return;
+        if (!isTargetItem(stack)) return;
 
         if (isPlayerInventoryIndex) {
             InvUtils.drop().slot(index); // index -> tu dong convert sang slot id dung ScreenHandler hien tai

@@ -22,7 +22,10 @@ import java.util.List;
  *
  * List 1 (Vanilla)  -> ItemListSetting, giong het co che "Auto Drop" trong module goc
  *                      InventoryTweaks cua Meteor Client (systems/modules/misc/InventoryTweaks.java).
- * List 2 (Custom)   -> quan ly qua CustomDropList (persist file JSON), them/xoa bang .additem / .delitem.
+ * List 2 (Custom)   -> GenericSetting<CustomDropListData>. Meteor tu ve 1 nut "Edit" ngay trong GUI
+ *                      cua module (bam vao mo CustomDropListScreen) - xem/them/xoa/tick truc tiep tren
+ *                      GUI, khong chi qua lenh chat. Van dung duoc .additem/.delitem/.itemlist song song
+ *                      vi ca 2 deu thao tac chung 1 object CustomDropListData nay.
  *
  * 3 pham vi doc lap:
  *  - inventory : quet 36 o inventory cua player (giong logic AutoDrop goc, chay tren TickEvent.Post,
@@ -39,6 +42,7 @@ public class AutoDropVanilla extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgScope = settings.createGroup("Pham vi ap dung");
     private final SettingGroup sgVanilla = settings.createGroup("List 1 - Vanilla");
+    private final SettingGroup sgCustom = settings.createGroup("List 2 - Custom");
 
     // ===================== PHAM VI AP DUNG =====================
     private final Setting<Boolean> scopeInventory = sgScope.add(new BoolSetting.Builder()
@@ -79,6 +83,16 @@ public class AutoDropVanilla extends Module {
         .build()
     );
 
+    // ===================== LIST 2: CUSTOM =====================
+    // Hien thi trong GUI module duoi dang nut "Edit" (nho CustomDropListData implement IScreenFactory).
+    // Bam vao se mo CustomDropListScreen: them item dang cam tren tay, tick bat/tat tung item, xoa.
+    private final Setting<CustomDropListData> customItems = sgCustom.add(new GenericSetting.Builder<CustomDropListData>()
+        .name("custom-items")
+        .description("Danh sach item tuy chinh (them qua .additem hoac nut Edit ben canh). Tick de bat drop.")
+        .defaultValue(new CustomDropListData())
+        .build()
+    );
+
     private int tickCounter = 0;
 
     public AutoDropVanilla() {
@@ -93,7 +107,17 @@ public class AutoDropVanilla extends Module {
     private boolean isTargetItem(Item item) {
         if (item == null) return false;
         if (vanillaItems.get().contains(item)) return true;
-        return CustomDropList.get().isEnabledFor(item);
+        return customItems.get().isEnabledFor(item);
+    }
+
+    /** Dung boi cac command .additem/.delitem/.itemlist de thao tac chung 1 du lieu voi GUI. */
+    public CustomDropListData getCustomItems() {
+        return customItems.get();
+    }
+
+    /** Goi sau khi command chinh sua list custom, de GUI/cac lan luu config phan anh dung thay doi. */
+    public void notifyCustomItemsChanged() {
+        customItems.onChanged();
     }
 
     // ===================== INVENTORY + HOTBAR (giong AutoDrop goc cua InventoryTweaks) =====================

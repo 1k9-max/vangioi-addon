@@ -1,18 +1,23 @@
 package com.example.autocropfarmer.commands;
 
-import com.example.autocropfarmer.modules.CustomDropList;
-import com.mojang.brigadier.CommandDispatcher;
+import com.example.autocropfarmer.modules.AutoDropVanilla;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import meteordevelopment.meteorclient.commands.Command;
+import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import net.minecraft.command.CommandSource;
 import net.minecraft.item.ItemStack;
 
 /**
- * .additem <ten>        -> luu item dang cam tren tay vao List 2 (Custom) cua AutoDropVanilla
- * .additem               -> (khong tham so) in ra danh sach custom hien tai kem stt
+ * .additem            -> luu item dang cam tren tay, TU DONG lay ten hien thi that cua item
+ *                        (support ca item da dat ten qua de ren) lam custom name.
+ * .additem <ten>      -> luu item dang cam tren tay, dung <ten> lam custom name (ghi de ten that).
+ *
+ * STT cua entry moi luon TU DONG = vi tri cuoi cung trong list (n+1).
+ * Du lieu duoc ghi TRUC TIEP vao setting "custom-items" cua module AutoDropVanilla, nen se hien
+ * ngay lap tuc trong GUI module (nut Edit) khong can khoi dong lai.
+ * Xem toan bo list custom -> dung lenh rieng: .itemlist
  */
 public class AddItemCommand extends Command {
 
@@ -22,42 +27,46 @@ public class AddItemCommand extends Command {
 
     @Override
     public void build(LiteralArgumentBuilder<CommandSource> builder) {
+        // .additem (khong tham so) -> tu dong lay ten that cua item
         builder.executes(ctx -> {
-            printList();
+            addItem(null);
             return SINGLE_SUCCESS;
         });
 
+        // .additem <ten> -> dung ten tuy chinh
         builder.then(argument("ten", StringArgumentType.greedyString())
-            .executes(this::addItem));
+            .executes(ctx -> {
+                String customName = StringArgumentType.getString(ctx, "ten");
+                addItem(customName);
+                return SINGLE_SUCCESS;
+            }));
     }
 
-    private int addItem(CommandContext<CommandSource> ctx) {
-        String name = StringArgumentType.getString(ctx, "ten");
+    private void addItem(String customName) {
+        if (mc.player == null) return;
 
-        if (mc.player == null) return SINGLE_SUCCESS;
+        AutoDropVanilla module = Modules.get().get(AutoDropVanilla.class);
+        if (module == null) {
+            ChatUtils.error("Khong tim thay module AutoDropVanilla.");
+            return;
+        }
+
         ItemStack held = mc.player.getMainHandStack();
         if (held.isEmpty()) {
             ChatUtils.error("Ban dang khong cam item nao tren tay.");
-            return SINGLE_SUCCESS;
-        }
-
-        int stt = CustomDropList.get().addHeldItem(name, held.getItem());
-        ChatUtils.info("Da them [" + stt + "] " + name + " (" + held.getItem().toString() + ") vao list custom.");
-        return SINGLE_SUCCESS;
-    }
-
-    private void printList() {
-        var entries = CustomDropList.get().getEntries();
-        if (entries.isEmpty()) {
-            ChatUtils.info("List custom dang trong. Dung .additem <ten> de them item dang cam tren tay.");
             return;
         }
-        ChatUtils.info("---- List Custom (AutoDropVanilla) ----");
-        for (int i = 0; i < entries.size(); i++) {
-            var e = entries.get(i);
-            String trangThai = e.enabled ? "[BAT]" : "[TAT]";
-            ChatUtils.info((i + 1) + ". " + e.name + " - " + e.itemId + " " + trangThai);
+
+        String realDisplayName = held.getName().getString();
+
+        int stt = module.getCustomItems().addHeldItem(customName, held.getItem(), realDisplayName);
+        if (stt < 0) {
+            ChatUtils.error("Khong the them item nay vao list custom.");
+            return;
         }
-        ChatUtils.info("Dung .delitem [stt] de xoa.");
+        module.notifyCustomItemsChanged();
+
+        String tenDaLuu = (customName == null || customName.isBlank()) ? realDisplayName : customName;
+        ChatUtils.info("Da them [" + stt + "] " + tenDaLuu + " vao list custom. Dung .itemlist hoac mo GUI module de xem.");
     }
 }

@@ -1,11 +1,15 @@
 package com.example.autocropfarmer;
 
+import com.example.autocropfarmer.commands.AddItemCommand;
 import com.example.autocropfarmer.commands.ClearFarmerCommand;
 import com.example.autocropfarmer.commands.ClearWatererCommand;
+import com.example.autocropfarmer.commands.DelItemCommand;
+import com.example.autocropfarmer.commands.ItemListCommand;
 import com.example.autocropfarmer.modules.AlchemicalPillMaking;
 import com.example.autocropfarmer.modules.AutoAcceptModule;
 import com.example.autocropfarmer.modules.AutoCropFarmer;
 import com.example.autocropfarmer.modules.AutoCropWaterer;
+import com.example.autocropfarmer.modules.AutoDropVanilla;
 import com.example.autocropfarmer.modules.AutoFarm;
 import com.example.autocropfarmer.modules.AutoFish;
 import com.example.autocropfarmer.modules.AutoWalkStraightModule;
@@ -13,9 +17,6 @@ import com.example.autocropfarmer.modules.ChatAutoResponder;
 import com.example.autocropfarmer.modules.FlyGotoModule;
 import com.example.autocropfarmer.modules.FlyToPlacementModule;
 import com.example.autocropfarmer.modules.LinhThaoLocations;
-import com.example.autocropfarmer.commands.AddItemCommand;
-import com.example.autocropfarmer.commands.DelItemCommand;
-import com.example.autocropfarmer.modules.AutoDropVanilla;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -26,8 +27,8 @@ import org.slf4j.Logger;
 
 /**
  * Entrypoint cua addon. Duoc tro toi tu "entrypoints" -> "meteor" trong fabric.mod.json.
- * Khong co license/whitelist check, khong ghi file ra dia, khong spawn process nao khac -
- * chi la cac module tu dong hoa client-side thong thuong.
+ * Khong co license/whitelist check, khong ghi file ra dia ngoai config module, khong spawn
+ * process nao khac - chi la cac module tu dong hoa client-side thong thuong.
  */
 public class AutoCropFarmerAddon extends MeteorAddon {
     public static final Logger LOG = LogUtils.getLogger();
@@ -56,6 +57,7 @@ public class AutoCropFarmerAddon extends MeteorAddon {
         Commands.add(new ClearWatererCommand());
         Commands.add(new AddItemCommand());
         Commands.add(new DelItemCommand());
+        Commands.add(new ItemListCommand());
     }
 
     @Override

@@ -3,10 +3,12 @@ package com.example.autocropfarmer;
 import com.example.autocropfarmer.commands.ClearFarmerCommand;
 import com.example.autocropfarmer.commands.ClearWatererCommand;
 import com.example.autocropfarmer.modules.AlchemicalPillMaking;
+import com.example.autocropfarmer.modules.AutoAcceptModule;
 import com.example.autocropfarmer.modules.AutoCropFarmer;
 import com.example.autocropfarmer.modules.AutoCropWaterer;
 import com.example.autocropfarmer.modules.AutoFarm;
 import com.example.autocropfarmer.modules.AutoFish;
+import com.example.autocropfarmer.modules.AutoWalkStraightModule;
 import com.example.autocropfarmer.modules.ChatAutoResponder;
 import com.example.autocropfarmer.modules.FlyGotoModule;
 import com.example.autocropfarmer.modules.FlyToPlacementModule;
@@ -21,6 +23,8 @@ import org.slf4j.Logger;
 
 /**
  * Entrypoint cua addon. Duoc tro toi tu "entrypoints" -> "meteor" trong fabric.mod.json.
+ * Khong co license/whitelist check, khong ghi file ra dia, khong spawn process nao khac -
+ * chi la cac module tu dong hoa client-side thong thuong.
  */
 public class AutoCropFarmerAddon extends MeteorAddon {
     public static final Logger LOG = LogUtils.getLogger();
@@ -40,6 +44,8 @@ public class AutoCropFarmerAddon extends MeteorAddon {
         Modules.get().add(new ChatAutoResponder());
         Modules.get().add(new FlyGotoModule());
         Modules.get().add(new FlyToPlacementModule());
+        Modules.get().add(new AutoAcceptModule());
+        Modules.get().add(new AutoWalkStraightModule());
 
         // Commands
         Commands.add(new ClearFarmerCommand());

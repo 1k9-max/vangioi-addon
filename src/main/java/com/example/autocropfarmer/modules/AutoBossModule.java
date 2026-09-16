@@ -8,20 +8,29 @@ import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
-import meteordevelopment.orbit.EventHandler;
 import meteordevelopment.meteorclient.utils.Utils;
+import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
-/** Automates selecting configured bosses and fighting them in the server GUI. */
+/**
+ * Tu dong chon khu, boss va danh boss theo GUI server.
+ *
+ * KIEN TRUC DON GIAN HOA: khong con xac nhan GUI/chat gi ca. Chi chay theo 2 pha
+ * thoi gian CO DINH, lap lai lien tuc:
+ *   1) TRAVELING (travel-seconds): mo GUI, click do kho -> boss -> khu vuc, cach nhau
+ *      gui-delay-ticks. Het travel-seconds la tu dong qua pha danh, KHONG CAN BIET
+ *      cac buoc click o tren co thanh cong hay khong.
+ *   2) FIGHTING (fight-seconds): tu dong click (Utils.leftClick/rightClick) moi
+ *      click-delay-ticks. Het fight-seconds la tu chuyen sang boss/khu vuc tiep theo
+ *      va quay lai pha TRAVELING, KHONG CAN BIET co danh trung hay khong.
+ */
 public class AutoBossModule extends Module {
     private enum Difficulty {
         EASY("so", new int[] {10, 12, 14, 16, 28, 30, 32, 34, 40}),
@@ -48,25 +57,11 @@ public class AutoBossModule extends Module {
     }
 
     private enum State {
-        OPENING,
-        SELECTING_DIFFICULTY,
-        SELECTING_BOSS,
-        SELECTING_ZONE,
-        WAITING_ARRIVAL,
+        TRAVELING,
         FIGHTING
     }
 
     private record BossTarget(Difficulty difficulty, int bossIndex, int zoneIndex) {}
-
-    // Server dung font "small caps" (vi du ᴄ, ᴛ, ɴ...) va mot vai ky tu Cyrillic
-    // gia dang (vi du ѕ thay cho s) cho ten cac GUI/menu, thay vi chu Latin thuong.
-    // Neu khong giai ma truoc, moi so sanh chuoi (title, tin nhan chat...) se sai
-    // vi client thay do la nhung ky tu hoan toan khac voi "c", "t", "n"...
-    private static final String STYLIZED_FROM = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀѕᴛᴜᴠᴡʏᴢ";
-    private static final String STYLIZED_TO = "abcdefghijklmnopqrstuvwyz";
-
-    private static final String TITLE_MAIN = "bang truyen tong";
-    private static final String TITLE_ZONE = "chon khu vuc";
 
     private static final int[] ZONE_SLOTS = {11, 13, 15};
     private static final String[] ZONE_NAMES = {"khu 1", "khu 2", "khu 3"};
@@ -102,48 +97,38 @@ public class AutoBossModule extends Module {
         .name("click-mode").description("Nut dung de danh boss.").defaultValue(ClickMode.LEFT).build());
 
     private final Setting<Integer> clickDelayTicks = sgWeapon.add(new IntSetting.Builder()
-        .name("click-delay-ticks").description("So tick giua moi lan nhan chuot.")
+        .name("click-delay-ticks").description("So tick giua moi lan tu dong click luc danh boss.")
         .defaultValue(2).range(1, 40).sliderMin(1).sliderMax(20).build());
 
-    private final Setting<Integer> fightSeconds = sgWeapon.add(new IntSetting.Builder()
-        .name("fight-seconds").description("So giay tu dong danh moi boss.")
-        .defaultValue(30).range(1, 3600).sliderMin(1).sliderMax(300).build());
-
     private final Setting<Integer> guiDelayTicks = sgGeneral.add(new IntSetting.Builder()
-        .name("gui-delay-ticks").description("So tick cho GUI cap nhat sau moi lan click.")
+        .name("gui-delay-ticks").description("So tick cho giua moi lan click trong luc di chuyen (mo GUI/chon do kho/boss/khu vuc).")
         .defaultValue(10).range(1, 40).sliderMin(1).sliderMax(20).build());
 
-    private final Setting<Integer> fightDelaySeconds = sgGeneral.add(new IntSetting.Builder()
-        .name("fight-delay-seconds")
-        .description("Thoi gian cho sau khi chon xong khu vuc (teleport toi boss) truoc khi bat dau tu dong chem, khong can doi tin nhan chat xac nhan nua.")
-        .defaultValue(5).range(1, 60).sliderMin(1).sliderMax(30).build());
+    private final Setting<Integer> travelSeconds = sgGeneral.add(new IntSetting.Builder()
+        .name("travel-seconds")
+        .description("Thoi gian danh cho pha 'qua boss' (mo GUI + chon do kho/boss/khu vuc + doi teleport). Het gio la tu chuyen sang pha danh du cac buoc click o tren xong hay chua.")
+        .defaultValue(30).range(3, 300).sliderMin(3).sliderMax(120).build());
 
-    private final Setting<Integer> menuTimeoutSeconds = sgGeneral.add(new IntSetting.Builder()
-        .name("menu-timeout-seconds")
-        .description("Thoi gian toi da cho GUI thuc su chuyen sang buoc tiep theo (do/ping cao) truoc khi tu mo lai menu chinh.")
-        .defaultValue(15).range(3, 120).sliderMin(3).sliderMax(60).build());
+    private final Setting<Integer> fightSeconds = sgWeapon.add(new IntSetting.Builder()
+        .name("fight-seconds")
+        .description("Thoi gian tu dong click de danh boss. Het gio la tu chuyen qua boss/khu vuc tiep theo du dang danh trung hay khong.")
+        .defaultValue(40).range(1, 3600).sliderMin(1).sliderMax(300).build());
 
     private final List<Setting<Boolean>> bossSettings = new ArrayList<>();
+
     private State state;
-    private int waitTicks;
-    private int fightTicks;
+    private int phaseTicks;
+    private int travelStep;
+    private int stepWaitTicks;
     private int clickTicks;
     private int targetIndex;
     private final List<BossTarget> targets = new ArrayList<>();
-
-    // Xac nhan tung buoc menu that su duoc server xu ly truoc khi coi la "xong",
-    // thay vi doan mo bang thoi gian co dinh (guiDelayTicks) - vi ping cao se lam
-    // client click vao GUI cu (chua kip cap nhat) roi tuong nham la da thanh cong.
-    private boolean menuClickSent;
-    private String menuBaselineTitle;
-    private int menuStageTicks;
 
     public AutoBossModule() {
         super(AutoCropFarmerAddon.CATEGORY, "auto-boss", "Tu dong chon khu, boss va danh boss theo GUI server.");
         for (int difficultyIndex = 0; difficultyIndex < Difficulty.values().length; difficultyIndex++) {
             Difficulty selectedDifficulty = Difficulty.values()[difficultyIndex];
             for (int bossIndex = 0; bossIndex < BOSS_NAMES[difficultyIndex].length; bossIndex++) {
-                int selectedBossIndex = bossIndex;
                 bossSettings.add(sgBoss.add(new BoolSetting.Builder()
                     .name(selectedDifficulty.key + "-boss-" + (bossIndex + 1))
                     .description("Chon boss " + BOSS_NAMES[difficultyIndex][bossIndex] + ".")
@@ -171,17 +156,13 @@ public class AutoBossModule extends Module {
         }
 
         targetIndex = 0;
-        state = State.OPENING;
-        waitTicks = 0;
-        resetMenuStage();
-        openMainGui();
+        beginTraveling();
     }
 
     @Override
     public void onDeactivate() {
         releaseClick();
         state = null;
-        resetMenuStage();
         if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
     }
 
@@ -212,147 +193,81 @@ public class AutoBossModule extends Module {
         if (mc.player == null || state == null) return;
 
         switch (state) {
-            case OPENING -> tickOpening();
-            case SELECTING_DIFFICULTY -> tickDifficulty();
-            case SELECTING_BOSS -> tickBoss();
-            case SELECTING_ZONE -> tickZone();
-            case WAITING_ARRIVAL -> tickArrival();
+            case TRAVELING -> tickTraveling();
             case FIGHTING -> tickFighting();
         }
     }
 
-    private void tickOpening() {
-        if (++waitTicks > menuTimeoutSeconds.get() * 20) {
-            waitTicks = 0;
-            openMainGui();
-            return;
-        }
-        String title = currentTitle();
-        if (title == null) return;
-        if (title.equals(TITLE_MAIN)) {
-            waitTicks = 0;
-            state = State.SELECTING_DIFFICULTY;
-        } else {
-            // Man hinh dang mo khong phai menu chinh mong doi (vi du GUI cu con sot
-            // lai tu lan chay truoc) -> dong lai va mo lai menu chinh cho chac chan.
-            mc.setScreen(null);
-            waitTicks = 0;
-            openMainGui();
-        }
+    private void beginTraveling() {
+        state = State.TRAVELING;
+        phaseTicks = 0;
+        travelStep = 0;
+        stepWaitTicks = 0;
     }
 
-    private void tickDifficulty() {
-        int slot = difficulty.get().ordinal() == 0 ? 11 : difficulty.get().ordinal() == 1 ? 13 : 15;
-        tickMenuStep(slot, State.SELECTING_BOSS, difficulty.get().key);
-    }
-
-    private void tickBoss() {
-        BossTarget target = targets.get(targetIndex);
-        int slot = target.difficulty.bossSlots[target.bossIndex];
-        tickMenuStep(slot, State.SELECTING_ZONE, TITLE_ZONE);
-    }
-
-    private void tickZone() {
-        BossTarget target = targets.get(targetIndex);
-        int slot = ZONE_SLOTS[target.zoneIndex];
-        // Sau khi chon khu vuc, GUI thuong DONG lai de teleport (khong co title co dinh
-        // de doi chieu) nen khong truyen expectedMarker - chi can title doi/dong la du.
-        tickMenuStep(slot, State.WAITING_ARRIVAL, null);
+    private void beginFighting() {
+        // Dam bao khong con GUI nao che man hinh truoc khi vao pha danh, neu khong
+        // tickFighting() se bi chan boi dieu kien "mc.currentScreen != null".
+        if (mc.currentScreen != null) mc.setScreen(null);
+        selectHotbarSlot(weaponSlot.get());
+        state = State.FIGHTING;
+        phaseTicks = 0;
+        clickTicks = 0;
     }
 
     /**
-     * Thuc hien 1 buoc click trong chuoi GUI (chon do kho / chon boss / chon khu vuc)
-     * va CHI xem la thanh cong khi noi dung GUI thuc su thay doi (hoac dong lai),
-     * thay vi gia dinh thanh cong ngay sau khi het "gui-delay-ticks".
-     *
-     * Ly do: khi ping cao (vi du server o xa, ping > 1-2s nhu trong video loi),
-     * gui-delay-ticks mac dinh (10 tick = 0.5s) co the troi qua truoc khi server
-     * kip gui goi cap nhat GUI cho buoc truoc do.
-     *
-     * @param expectedMarker chuoi (da qua simplify) BAT BUOC phai xuat hien trong title
-     *                       moi de coi buoc click la thanh cong dung nghia (vi du "cao"
-     *                       cho buoc chon do kho, hoac TITLE_ZONE cho buoc chon boss).
-     *                       Truyen null neu chi can biet GUI da dong hoac doi noi dung,
-     *                       khong the biet truoc noi dung chinh xac se la gi.
+     * Pha "qua boss": mo GUI roi click lan luot do kho -> boss -> khu vuc, cach nhau
+     * gui-delay-ticks, KHONG xac minh GUI co thuc su cap nhat hay khong. Het
+     * travel-seconds la tu dong qua pha danh, bat ke cac buoc click o tren
+     * co thanh cong hay chua (vi du click "hut" vao GUI cu do ping cao).
      */
-    private void tickMenuStep(int slotToClick, State nextState, String expectedMarker) {
-        if (!menuClickSent) {
-            if (!(mc.currentScreen instanceof HandledScreen<?> screen)) return;
-            if (++waitTicks < guiDelayTicks.get()) return;
-            String baseline = currentTitle();
-            if (clickSlot(screen, slotToClick)) {
-                menuClickSent = true;
-                menuBaselineTitle = baseline;
-                menuStageTicks = 0;
-            }
+    private void tickTraveling() {
+        if (++phaseTicks >= travelSeconds.get() * 20) {
+            beginFighting();
             return;
         }
 
-        // Da click roi - tu day KHONG duoc bat buoc man hinh phai con mo, vi voi buoc
-        // "Chon Khu Vuc" thi dau hieu THANH CONG chinh la GUI TU DONG DONG lai de teleport.
-        // (Bug truoc: dat dieu kien "phai co HandledScreen" o dau ham khien nhanh nay
-        // khong bao gio chay toi duoc sau khi GUI da dong -> module dung im vinh vien
-        // ngay sau khi tp, khong tu hoi phuc duoc vi ca doan menu-timeout cung bi chan.)
-
-        String title = currentTitle();
-        boolean closed = title == null;
-        boolean changed = !closed && !title.equals(menuBaselineTitle);
-
-        if (closed || changed) {
-            boolean matchesExpected = closed || expectedMarker == null || title.contains(expectedMarker);
-            resetMenuStage();
-            waitTicks = 0;
-            if (matchesExpected) {
-                state = nextState;
-                if (nextState == State.WAITING_ARRIVAL && mc.currentScreen != null) {
-                    // GUI "Chon Khu Vuc" doi khac lai khong tu dong dong sau khi teleport
-                    // -> tu dong dong de tickFighting() khong bi chan boi "currentScreen != null".
-                    mc.setScreen(null);
-                }
-            } else {
-                // GUI doi sang noi dung khac voi mong doi (vi du click trung luc server
-                // chua kip cap nhat, roi lai vao dung/sai menu khac) -> tu phuc hoi thay
-                // vi tiep tuc voi trang thai sai va chon nham boss/khu vuc.
-                state = State.OPENING;
-                mc.setScreen(null);
+        BossTarget target = targets.get(targetIndex);
+        switch (travelStep) {
+            case 0 -> {
                 openMainGui();
+                travelStep = 1;
+                stepWaitTicks = 0;
             }
-            return;
-        }
-
-        if (++menuStageTicks > menuTimeoutSeconds.get() * 20) {
-            // GUI khong tien trien sau menu-timeout-seconds (co the do mat goi tin/ping
-            // qua cao) -> tu phuc hoi bang cach mo lai menu chinh tu dau thay vi treo mai.
-            resetMenuStage();
-            waitTicks = 0;
-            state = State.OPENING;
-            openMainGui();
-        }
-    }
-
-    private String currentTitle() {
-        if (mc.currentScreen instanceof HandledScreen<?> screen) {
-            return simplify(screen.getTitle().getString());
-        }
-        return null;
-    }
-
-    private void resetMenuStage() {
-        menuClickSent = false;
-        menuBaselineTitle = null;
-        menuStageTicks = 0;
-    }
-
-    private void tickArrival() {
-        // Khong con doi tin nhan chat "da den" nua - chi cho du fight-delay-seconds
-        // (de nhan vat kip teleport/load xong) roi tu dong chuyen sang chem.
-        if (mc.currentScreen != null) mc.setScreen(null);
-        if (++waitTicks >= fightDelaySeconds.get() * 20) {
-            waitTicks = 0;
-            state = State.FIGHTING;
-            fightTicks = 0;
-            clickTicks = 0;
-            selectHotbarSlot(weaponSlot.get());
+            case 1 -> {
+                if (++stepWaitTicks < guiDelayTicks.get()) return;
+                if (mc.currentScreen instanceof HandledScreen<?> screen) {
+                    int slot = difficulty.get().ordinal() == 0 ? 11 : difficulty.get().ordinal() == 1 ? 13 : 15;
+                    if (clickSlot(screen, slot)) {
+                        travelStep = 2;
+                        stepWaitTicks = 0;
+                    }
+                }
+            }
+            case 2 -> {
+                if (++stepWaitTicks < guiDelayTicks.get()) return;
+                if (mc.currentScreen instanceof HandledScreen<?> screen) {
+                    int slot = target.difficulty.bossSlots[target.bossIndex];
+                    if (clickSlot(screen, slot)) {
+                        travelStep = 3;
+                        stepWaitTicks = 0;
+                    }
+                }
+            }
+            case 3 -> {
+                if (++stepWaitTicks < guiDelayTicks.get()) return;
+                if (mc.currentScreen instanceof HandledScreen<?> screen) {
+                    int slot = ZONE_SLOTS[target.zoneIndex];
+                    if (clickSlot(screen, slot)) {
+                        travelStep = 4;
+                        stepWaitTicks = 0;
+                    }
+                }
+            }
+            default -> {
+                // Da click xong het 3 buoc - chi con cho het travel-seconds (thoi gian
+                // teleport/di chuyen toi noi) roi tu dong qua pha danh.
+            }
         }
     }
 
@@ -362,13 +277,11 @@ public class AutoBossModule extends Module {
             return;
         }
 
-        if (++fightTicks >= fightSeconds.get() * 20) {
+        if (++phaseTicks >= fightSeconds.get() * 20) {
             releaseClick();
             targetIndex++;
             if (targetIndex >= targets.size()) targetIndex = 0;
-            state = State.OPENING;
-            waitTicks = 0;
-            openMainGui();
+            beginTraveling();
             return;
         }
 
@@ -418,16 +331,5 @@ public class AutoBossModule extends Module {
         if (mc.options == null) return;
         mc.options.attackKey.setPressed(false);
         mc.options.useKey.setPressed(false);
-    }
-
-    private static String simplify(String value) {
-        StringBuilder decoded = new StringBuilder(value.length());
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            int stylizedIndex = STYLIZED_FROM.indexOf(c);
-            decoded.append(stylizedIndex >= 0 ? STYLIZED_TO.charAt(stylizedIndex) : c);
-        }
-        return Normalizer.normalize(decoded.toString().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
-            .replaceAll("\\p{M}", "").replace("đ", "d").replaceAll("\\s+", " ").trim();
     }
 }

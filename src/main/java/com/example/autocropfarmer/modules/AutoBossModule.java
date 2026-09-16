@@ -11,7 +11,6 @@ import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
@@ -102,7 +101,7 @@ public class AutoBossModule extends Module {
 
     private final Setting<Integer> guiDelayTicks = sgGeneral.add(new IntSetting.Builder()
         .name("gui-delay-ticks").description("So tick cho GUI cap nhat sau moi lan click.")
-        .defaultValue(5).range(1, 40).sliderMin(1).sliderMax(20).build());
+        .defaultValue(10).range(1, 40).sliderMin(1).sliderMax(20).build());
 
     private final Setting<Integer> arrivalTimeoutSeconds = sgGeneral.add(new IntSetting.Builder()
         .name("arrival-timeout-seconds").description("Thoi gian toi da cho chat xac nhan da den boss.")
@@ -292,7 +291,8 @@ public class AutoBossModule extends Module {
 
     private boolean clickSlot(HandledScreen<?> screen, int slot) {
         ScreenHandler handler = screen.getScreenHandler();
-        if (slot < 0 || slot >= handler.slots.size() || handler.getSlot(slot).getStack().isEmpty()) return false;
+        // Đã gỡ bỏ điều kiện getStack().isEmpty() để tránh trường hợp server trả về item đặc biệt khiến client tưởng nhầm ô trống và bỏ qua click
+        if (slot < 0 || slot >= handler.slots.size()) return false;
         if (mc.interactionManager == null || mc.player == null) return false;
         mc.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, mc.player);
         return true;

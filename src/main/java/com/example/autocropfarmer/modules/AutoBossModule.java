@@ -1,7 +1,6 @@
 package com.example.autocropfarmer.modules;
 
 import com.example.autocropfarmer.AutoCropFarmerAddon;
-import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.EnumSetting;
@@ -11,10 +10,14 @@ import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.math.Box;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -109,13 +112,19 @@ public class AutoBossModule extends Module {
         .name("fight-seconds").description("So giay tu dong danh moi boss.")
         .defaultValue(30).range(1, 3600).sliderMin(1).sliderMax(300).build());
 
+    private final Setting<Integer> attackRangeBlocks = sgWeapon.add(new IntSetting.Builder()
+        .name("attack-range")
+        .description("Khoang cach toi da (block) de tu dong nham va danh boss gan nhat.")
+        .defaultValue(5).range(2, 12).sliderMin(2).sliderMax(10).build());
+
     private final Setting<Integer> guiDelayTicks = sgGeneral.add(new IntSetting.Builder()
         .name("gui-delay-ticks").description("So tick cho GUI cap nhat sau moi lan click.")
         .defaultValue(10).range(1, 40).sliderMin(1).sliderMax(20).build());
 
-    private final Setting<Integer> arrivalTimeoutSeconds = sgGeneral.add(new IntSetting.Builder()
-        .name("arrival-timeout-seconds").description("Thoi gian toi da cho chat xac nhan da den boss.")
-        .defaultValue(40).range(5, 300).sliderMin(5).sliderMax(120).build());
+    private final Setting<Integer> fightDelaySeconds = sgGeneral.add(new IntSetting.Builder()
+        .name("fight-delay-seconds")
+        .description("Thoi gian cho sau khi chon xong khu vuc (teleport toi boss) truoc khi bat dau tu dong chem, khong can doi tin nhan chat xac nhan nua.")
+        .defaultValue(5).range(1, 60).sliderMin(1).sliderMax(30).build());
 
     private final Setting<Integer> menuTimeoutSeconds = sgGeneral.add(new IntSetting.Builder()
         .name("menu-timeout-seconds")
@@ -221,7 +230,7 @@ public class AutoBossModule extends Module {
     }
 
     private void tickOpening() {
-        if (++waitTicks > arrivalTimeoutSeconds.get() * 20) {
+        if (++waitTicks > menuTimeoutSeconds.get() * 20) {
             waitTicks = 0;
             openMainGui();
             return;
@@ -338,12 +347,15 @@ public class AutoBossModule extends Module {
     }
 
     private void tickArrival() {
-        // Dam bao khong con GUI nao che man hinh truoc khi vao trang thai danh boss,
-        // neu khong tickFighting() se bi chan boi dieu kien "mc.currentScreen != null".
+        // Khong con doi tin nhan chat "da den" nua - chi cho du fight-delay-seconds
+        // (de nhan vat kip teleport/load xong) roi tu dong chuyen sang chem.
         if (mc.currentScreen != null) mc.setScreen(null);
-        if (++waitTicks > arrivalTimeoutSeconds.get() * 20) {
+        if (++waitTicks >= fightDelaySeconds.get() * 20) {
             waitTicks = 0;
-            openMainGui();
+            state = State.FIGHTING;
+            fightTicks = 0;
+            clickTicks = 0;
+            selectHotbarSlot(weaponSlot.get());
         }
     }
 
@@ -365,23 +377,52 @@ public class AutoBossModule extends Module {
 
         if (clickTicks > 0) clickTicks--;
         if (clickTicks == 0) {
-            setClick(true);
+            performAttackPulse();
             clickTicks = clickDelayTicks.get();
-        } else {
-            setClick(false);
         }
     }
 
-    @EventHandler
-    private void onReceiveMessage(ReceiveMessageEvent event) {
-        if (state != State.WAITING_ARRIVAL) return;
-        String message = simplify(event.getMessage().getString());
-        if (message.contains("da den")) {
-            state = State.FIGHTING;
-            fightTicks = 0;
-            clickTicks = 0;
-            selectHotbarSlot(weaponSlot.get());
+    /**
+     * Thuc hien 1 "nhat" tan cong truc tiep len entity gan nhat trong tam danh, thay vi
+     * chi gia lap giu/nha phim (mc.options.attackKey.setPressed). Ly do: hanh dong tan
+     * cong that su trong Minecraft duoc xu ly qua co che dem su kien nhan phim/chuot
+     * that (wasPressed()/timesPressed), khong tu dong tang len chi bang cach goi
+     * setPressed(true) tu code -> truoc day nhan phim gia khong lam nhan vat vung tay,
+     * boss khong bi trung don nao ("khong tu chem").
+     * Goi thang interactionManager.attackEntity()/interactEntity() la cach dang tin cay
+     * duoc cac module tu dong chien dau (killaura, auto-farm...) su dung, vi day chinh
+     * la ham ma vanilla goi ben trong khi ban that su bam chuot.
+     */
+    private void performAttackPulse() {
+        if (mc.player == null || mc.world == null || mc.interactionManager == null) return;
+        Entity target = findNearestBossEntity();
+        if (target == null) return;
+
+        if (clickMode.get() == ClickMode.LEFT) {
+            mc.interactionManager.attackEntity(mc.player, target);
+            mc.player.swingHand(Hand.MAIN_HAND);
+        } else {
+            ActionResult result = mc.interactionManager.interactEntity(mc.player, target, Hand.MAIN_HAND);
+            if (result.isAccepted()) mc.player.swingHand(Hand.MAIN_HAND);
         }
+    }
+
+    private Entity findNearestBossEntity() {
+        double range = attackRangeBlocks.get();
+        Box searchBox = mc.player.getBoundingBox().expand(range);
+        LivingEntity nearest = null;
+        double nearestDistSq = Double.MAX_VALUE;
+        for (LivingEntity entity : mc.world.getEntitiesByClass(LivingEntity.class, searchBox, e -> e != mc.player && e.isAlive())) {
+            // Bo qua nguoi choi khac dang o cung khu vuc boss (server co bang xep hang
+            // sat thuong nen thuong nhieu nguoi cung danh 1 boss trong 1 phong).
+            if (entity instanceof PlayerEntity) continue;
+            double distSq = entity.squaredDistanceTo(mc.player);
+            if (distSq <= range * range && distSq < nearestDistSq) {
+                nearestDistSq = distSq;
+                nearest = entity;
+            }
+        }
+        return nearest;
     }
 
     private void openMainGui() {
@@ -402,12 +443,6 @@ public class AutoBossModule extends Module {
 
     private void selectHotbarSlot(int slot) {
         if (mc.player != null) mc.player.getInventory().setSelectedSlot(slot - 1);
-    }
-
-    private void setClick(boolean pressed) {
-        if (mc.options == null) return;
-        if (clickMode.get() == ClickMode.LEFT) mc.options.attackKey.setPressed(pressed);
-        else mc.options.useKey.setPressed(pressed);
     }
 
     private void releaseClick() {

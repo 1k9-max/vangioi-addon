@@ -276,9 +276,8 @@ public class AutoBossModule extends Module {
      *                       khong the biet truoc noi dung chinh xac se la gi.
      */
     private void tickMenuStep(int slotToClick, State nextState, String expectedMarker) {
-        if (!(mc.currentScreen instanceof HandledScreen<?> screen)) return;
-
         if (!menuClickSent) {
+            if (!(mc.currentScreen instanceof HandledScreen<?> screen)) return;
             if (++waitTicks < guiDelayTicks.get()) return;
             String baseline = currentTitle();
             if (clickSlot(screen, slotToClick)) {
@@ -288,6 +287,12 @@ public class AutoBossModule extends Module {
             }
             return;
         }
+
+        // Da click roi - tu day KHONG duoc bat buoc man hinh phai con mo, vi voi buoc
+        // "Chon Khu Vuc" thi dau hieu THANH CONG chinh la GUI TU DONG DONG lai de teleport.
+        // (Bug truoc: dat dieu kien "phai co HandledScreen" o dau ham khien nhanh nay
+        // khong bao gio chay toi duoc sau khi GUI da dong -> module dung im vinh vien
+        // ngay sau khi tp, khong tu hoi phuc duoc vi ca doan menu-timeout cung bi chan.)
 
         String title = currentTitle();
         boolean closed = title == null;

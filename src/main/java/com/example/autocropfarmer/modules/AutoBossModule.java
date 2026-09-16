@@ -298,6 +298,11 @@ public class AutoBossModule extends Module {
             waitTicks = 0;
             if (matchesExpected) {
                 state = nextState;
+                if (nextState == State.WAITING_ARRIVAL && mc.currentScreen != null) {
+                    // GUI "Chon Khu Vuc" doi khac lai khong tu dong dong sau khi teleport
+                    // -> tu dong dong de tickFighting() khong bi chan boi "currentScreen != null".
+                    mc.setScreen(null);
+                }
             } else {
                 // GUI doi sang noi dung khac voi mong doi (vi du click trung luc server
                 // chua kip cap nhat, roi lai vao dung/sai menu khac) -> tu phuc hoi thay
@@ -333,6 +338,9 @@ public class AutoBossModule extends Module {
     }
 
     private void tickArrival() {
+        // Dam bao khong con GUI nao che man hinh truoc khi vao trang thai danh boss,
+        // neu khong tickFighting() se bi chan boi dieu kien "mc.currentScreen != null".
+        if (mc.currentScreen != null) mc.setScreen(null);
         if (++waitTicks > arrivalTimeoutSeconds.get() * 20) {
             waitTicks = 0;
             openMainGui();

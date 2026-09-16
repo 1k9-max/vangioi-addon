@@ -9,13 +9,12 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
+import meteordevelopment.meteorclient.utils.Utils;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.entity.Entity;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.hit.EntityHitResult;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -376,28 +375,17 @@ public class AutoBossModule extends Module {
     }
 
     /**
-     * Auto click - danh (hoac dung item) vao bat cu thu gi dang o duoi tam ngam cua
-     * nhan vat (giong het viec ban that su bam chuot), khong tu tim/gioi han theo
-     * khoang cach rieng - dua hoan toan vao he thong ngam (reach) co san cua Minecraft.
-     * Dung goi thang interactionManager thay vi gia lap giu phim, vi hanh dong tan cong
-     * that su duoc xu ly qua bo dem su kien nhan phim that (wasPressed()), khong tu
-     * tang len chi bang cach goi setPressed(true) tu code.
+     * Dung dung 2 ham utility ma chinh module "Auto Clicker" goc cua Meteor dung
+     * (Utils.leftClick() / Utils.rightClick()) thay vi tu goi interactionManager
+     * hay tu set KeyBinding.setPressed() - day la cach da duoc kiem chung la hoat
+     * dong dung, vi no xu ly dung toan bo chu trinh 1 lan click that (bao gom ca
+     * viec dang ky su kien nhan phim ma vanilla can de thuc su vung tay/tan cong).
      */
     private void performAttackPulse() {
-        if (mc.player == null || mc.interactionManager == null) return;
-
-        if (mc.crosshairTarget instanceof EntityHitResult entityHit) {
-            Entity target = entityHit.getEntity();
-            if (clickMode.get() == ClickMode.LEFT) {
-                mc.interactionManager.attackEntity(mc.player, target);
-                mc.player.swingHand(Hand.MAIN_HAND);
-            } else {
-                ActionResult result = mc.interactionManager.interactEntity(mc.player, target, Hand.MAIN_HAND);
-                if (result.isAccepted()) mc.player.swingHand(Hand.MAIN_HAND);
-            }
-        } else if (clickMode.get() == ClickMode.LEFT) {
-            // Khong co gi duoi tam ngam - van vung tay nhu click that (khong lam gi khac).
-            mc.player.swingHand(Hand.MAIN_HAND);
+        if (clickMode.get() == ClickMode.LEFT) {
+            Utils.leftClick();
+        } else {
+            Utils.rightClick();
         }
     }
 

@@ -6,9 +6,13 @@ import com.example.autocropfarmer.commands.ClearWatererCommand;
 import com.example.autocropfarmer.commands.DelItemCommand;
 import com.example.autocropfarmer.commands.ItemListCommand;
 import com.example.autocropfarmer.modules.AlchemicalPillMaking;
+import com.example.autocropfarmer.modules.AutoMinigameModule;
 import com.example.autocropfarmer.modules.AutoAcceptModule;
+import com.example.autocropfarmer.modules.AutoPhobanModule;
 import com.example.autocropfarmer.modules.AutoCropFarmer;
 import com.example.autocropfarmer.modules.AutoCropWaterer;
+import com.example.autocropfarmer.modules.AutoBossModule;
+import com.example.autocropfarmer.modules.AutoFurnaceModule;
 import com.example.autocropfarmer.modules.AutoDropVanilla;
 import com.example.autocropfarmer.modules.ChestDropAllButton;
 import com.example.autocropfarmer.modules.AutoFarm;
@@ -18,12 +22,14 @@ import com.example.autocropfarmer.modules.ChatAutoResponder;
 import com.example.autocropfarmer.modules.FlyGotoModule;
 import com.example.autocropfarmer.modules.FlyToPlacementModule;
 import com.example.autocropfarmer.modules.LinhThaoLocations;
+import com.example.autocropfarmer.hud.ExperienceHud;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
 import meteordevelopment.meteorclient.commands.Commands;
 import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.systems.hud.Hud;
 import org.slf4j.Logger;
 
 /**
@@ -38,11 +44,16 @@ public class AutoCropFarmerAddon extends MeteorAddon {
     @Override
     public void onInitialize() {
         LOG.info("Initializing Auto Crop Farmer addon");
+        Hud.get().register(ExperienceHud.INFO);
 
         // Modules
         Modules.get().add(new AutoCropFarmer());
         Modules.get().add(new AutoCropWaterer());
+        Modules.get().add(new AutoBossModule());
+        Modules.get().add(new AutoFurnaceModule());
         Modules.get().add(new AlchemicalPillMaking());
+        Modules.get().add(new AutoPhobanModule());
+        Modules.get().add(new AutoMinigameModule());
         Modules.get().add(new AutoFarm());
         Modules.get().add(new AutoFish());
         Modules.get().add(new LinhThaoLocations());

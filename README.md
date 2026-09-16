@@ -5,6 +5,12 @@ va giam sat mot vung cay trong (mac dinh nham vao Pitcher Crop / Pitcher Plant).
 
 ## Thanh phan
 
+- **Module `AlchemicalPillMaking`** (`com.example.autocropfarmer.modules.AlchemicalPillMaking`)
+  thay cho module Luyen Dan cu cua LVT; chi drop cac mau stained-glass-pane da chon.
+- **Module `AutoPhobanModule`** (`com.example.autocropfarmer.modules.AutoPhobanModule`)
+  chuyen logic AutoPB sang Meteor, quet va click tren trang GUI hien tai, khong tu dong doi trang.
+- **Module `AutoMinigameModule`** (`com.example.autocropfarmer.modules.AutoMinigameModule`)
+  chuyen logic Ghep Do, doc CustomModelData va click slot muc tieu.
 - **Module `AutoCropFarmer`** (`com.example.autocropfarmer.modules.AutoCropFarmer`)
   State machine 6 buoc: WAITING_ITEM_1 -> WAITING_ITEM_2 -> SELECT_POS_1 -> SELECT_POS_2
   -> AUTO_PLANTING -> MONITORING. Xem javadoc dau file de biet chi tiet tung buoc.

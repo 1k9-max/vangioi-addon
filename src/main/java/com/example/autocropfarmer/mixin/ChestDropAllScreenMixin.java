@@ -51,17 +51,6 @@ public abstract class ChestDropAllScreenMixin<T extends ScreenHandler> extends S
 
         ScreenHandler handler = getScreenHandler();
 
-        // DEBUG TAM THOI: in ra loai GUI that + module co dang bat khong + co duoc phep hien nut khong.
-        // XOA dong nay sau khi da xac nhan nut hien binh thuong.
-        if (handler != null) {
-            try {
-                ChatUtils.info("[DEBUG DropAll] slots=" + handler.slots.size()
-                    + " | moduleActive=" + module.isActive()
-                    + " | canShow=" + module.canShowButton(handler)
-                    + " | x=" + x + " y=" + y + " bgH=" + backgroundHeight);
-            } catch (Exception ignored) {
-            }
-        }
 
         if (!module.canShowButton(handler)) return;
 

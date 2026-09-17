@@ -246,6 +246,8 @@ public class AutoBossModule extends Module {
     private int comboCyclesDone;
     private int targetIndex;
     private int commandCooldownTicks;
+    private int lastObservedSelectedSlot = -1;
+    private boolean manualHotbarOverride;
     private final List<BossTarget> targets = new ArrayList<>();
 
     // --- Debug logging ---
@@ -272,6 +274,8 @@ public class AutoBossModule extends Module {
     @Override
     public void onActivate() {
         releaseClick();
+        lastObservedSelectedSlot = -1;
+        manualHotbarOverride = false;
         debugTickCounter = 0;
         openDebugLog();
         log("=== Module BAT (onActivate) === weapon-slot=%d tool-slot=%d difficulty=%s farm-mode=%s attack-mode=%s"
@@ -391,6 +395,21 @@ public class AutoBossModule extends Module {
     private void onTick(TickEvent.Post event) {
         debugTickCounter++;
         if (commandCooldownTicks > 0) commandCooldownTicks--;
+
+        if (mc.player != null) {
+            int currentSelectedSlot = mc.player.getInventory().selectedSlot;
+            int requiredToolSlot = toolSlot.get() - 1;
+            int requiredWeaponSlot = weaponSlot.get() - 1;
+
+            if (currentSelectedSlot == requiredToolSlot || currentSelectedSlot == requiredWeaponSlot) {
+                manualHotbarOverride = false;
+            } else if (lastObservedSelectedSlot >= 0 && currentSelectedSlot != lastObservedSelectedSlot) {
+                // Nguoi choi dang dung tay de chon slot khac module -> tam ngung ep slot tu dong
+                // cho den khi quay lai slot tool/weapon cu the cua module.
+                manualHotbarOverride = true;
+            }
+            lastObservedSelectedSlot = currentSelectedSlot;
+        }
 
         if (mc.player == null || state == null) return;
 
@@ -729,7 +748,22 @@ public class AutoBossModule extends Module {
             logError("selectHotbarSlot(" + slot + "): mc.player null, bo qua.");
             return;
         }
+
         int index = slot - 1;
+        if (mc.player.getInventory().selectedSlot == index) {
+            if (debugIncludeTickSpam.get()) {
+                log("selectHotbarSlot(" + slot + "): da o slot nay, bo qua lam lai.");
+            }
+            return;
+        }
+
+        if (manualHotbarOverride && mc.player.getInventory().selectedSlot != toolSlot.get() - 1
+            && mc.player.getInventory().selectedSlot != weaponSlot.get() - 1) {
+            log("selectHotbarSlot(" + slot + "): nguoi dung da cuon hotbar khac slot module, bo qua ep slot tu dong.");
+            return;
+        }
+
+        manualHotbarOverride = false;
         mc.player.getInventory().setSelectedSlot(index);
         if (mc.player.networkHandler != null) {
             mc.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(index));

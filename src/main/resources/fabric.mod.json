@@ -8,17 +8,17 @@
     "oibanoi874"
   ],
   "contact": {
-    "repo": "https://github.com/your-username/autocropfarmer-addon"
+    "repo": "https://github.com/your-username/vangioi-addon"
   },
-  "icon": "assets/autocropfarmer/icon.png",
+  "icon": "assets/vangioi/icon.png",
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "com.example.autocropfarmer.AutoCropFarmerAddon"
+      "com.example.vangioi.AutoCropFarmerAddon"
     ]
   },
   "mixins": [
-    "autocropfarmer-addon.mixins.json"
+    "vangioi-addon.mixins.json"
   ],
   "custom": {
     "meteor-client:color": "80,200,120"

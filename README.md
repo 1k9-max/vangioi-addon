@@ -5,17 +5,17 @@ Auto Boss, Auto Fish, Auto Crop, va cac helper phu tro cho server Van Gioi.
 
 ## Thanh phan
 
-- **Module `AlchemicalPillMaking`** (`com.example.autocropfarmer.modules.AlchemicalPillMaking`)
+- **Module `AlchemicalPillMaking`** (`com.example.vangioi.modules.AlchemicalPillMaking`)
   thay cho module Luyen Dan cu cua LVT; chi drop cac mau stained-glass-pane da chon.
-- **Module `AutoPhobanModule`** (`com.example.autocropfarmer.modules.AutoPhobanModule`)
+- **Module `AutoPhobanModule`** (`com.example.vangioi.modules.AutoPhobanModule`)
   chuyen logic AutoPB sang Meteor, quet va click tren trang GUI hien tai, khong tu dong doi trang.
-- **Module `AutoMinigameModule`** (`com.example.autocropfarmer.modules.AutoMinigameModule`)
+- **Module `AutoMinigameModule`** (`com.example.vangioi.modules.AutoMinigameModule`)
   chuyen logic Ghep Do, doc CustomModelData va click slot muc tieu.
-- **Module `AutoCropFarmer`** (`com.example.autocropfarmer.modules.AutoCropFarmer`)
+- **Module `AutoCropFarmer`** (`com.example.vangioi.modules.AutoCropFarmer`)
   State machine 6 buoc: WAITING_ITEM_1 -> WAITING_ITEM_2 -> SELECT_POS_1 -> SELECT_POS_2
   -> AUTO_PLANTING -> MONITORING. Xem javadoc dau file de biet chi tiet tung buoc.
 - **Command `.clear-farmer`** (alias `.reset-farmer`)
-  (`com.example.autocropfarmer.commands.ClearFarmerCommand`) - goi `forceReset()` de xoa
+  (`com.example.vangioi.commands.ClearFarmerCommand`) - goi `forceReset()` de xoa
   toan bo du lieu tam va dua module ve trang thai ban dau.
 
 ## Build

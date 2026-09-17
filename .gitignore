@@ -15,3 +15,7 @@ Thumbs.db
 # Logs
 *.log
 latest.log
+
+# Generated dump artifacts
+gui_dumps/
+*.tar.gz

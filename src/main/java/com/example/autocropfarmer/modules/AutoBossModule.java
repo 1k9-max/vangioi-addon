@@ -125,16 +125,16 @@ public class AutoBossModule extends Module {
         .description("QUET: het boss trong tung khu roi sang khu tiep. CLEAR: het 3 khu cua tung boss roi sang boss tiep.")
         .defaultValue(OrderMode.QUET).build());
 
+    private final Setting<AttackMode> attackMode = sgWeapon.add(new EnumSetting.Builder<AttackMode>()
+        .name("attack-mode")
+        .description("SINGLE: tu dong click lien tuc theo click-mode (chuot trai HOAC chuot phai). COMBO: lap lai chuoi chuot phai -> chuot trai -> sneak -> chuot phai -> chuot trai -> sneak, moi buoc cach nhau click-delay-ticks.")
+        .defaultValue(AttackMode.SINGLE).build());
+
     private final Setting<ClickMode> clickMode = sgWeapon.add(new EnumSetting.Builder<ClickMode>()
         .name("click-mode").description("Nut dung de danh boss (chi ap dung khi attack-mode = SINGLE).")
         .defaultValue(ClickMode.LEFT)
         .visible(() -> attackMode.get() == AttackMode.SINGLE)
         .build());
-
-    private final Setting<AttackMode> attackMode = sgWeapon.add(new EnumSetting.Builder<AttackMode>()
-        .name("attack-mode")
-        .description("SINGLE: tu dong click lien tuc theo click-mode (chuot trai HOAC chuot phai). COMBO: lap lai chuoi chuot phai -> chuot trai -> sneak -> chuot phai -> chuot trai -> sneak, moi buoc cach nhau click-delay-ticks.")
-        .defaultValue(AttackMode.SINGLE).build());
 
     private final Setting<Integer> clickDelayTicks = sgWeapon.add(new IntSetting.Builder()
         .name("click-delay-ticks").description("So tick giua moi lan tu dong click luc danh boss.")

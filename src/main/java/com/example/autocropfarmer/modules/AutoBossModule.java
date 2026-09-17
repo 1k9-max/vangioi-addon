@@ -23,16 +23,17 @@ import java.util.List;
  * Tu dong chon khu, boss va danh boss theo GUI server.
  *
  * KIEN TRUC: khong xac nhan GUI/chat, chay theo 3 pha thoi gian, lap lai lien tuc:
- *   1) TRAVELING (travel-seconds): mo GUI, click do kho -> boss -> khu vuc, cach nhau
- *      gui-open-delay-ticks / gui-delay-ticks. Het travel-seconds la qua pha danh;
- *      neu extend-travel-if-not-ready bat va 3 buoc click chua xong thi duoc gia han
- *      them (toi da travel-extend-max-ticks) thay vi ep qua som.
- *   2) FIGHTING (fight-seconds): tu dong click (Utils.leftClick/rightClick) moi
- *      click-delay-ticks. Het fight-seconds la dung click, KHONG CAN BIET co danh
- *      trung hay khong.
+ *   1) TRAVELING (travel-seconds): chon slot truc -> cho tool-select-delay-ticks ->
+ *      bam chuot phai mo GUI (tu dong bam lai neu sau gui-retry-after-ticks van
+ *      khong thay GUI) -> click do kho -> boss -> khu vuc, cach nhau gui-open-delay-ticks
+ *      / gui-delay-ticks. Het travel-seconds la qua pha danh; neu extend-travel-if-not-ready
+ *      bat va cac buoc chon chua xong thi duoc gia han them (toi da travel-extend-max-ticks).
+ *   2) FIGHTING (fight-seconds): attack-mode = SINGLE (click lien tuc theo click-mode)
+ *      hoac COMBO (lap lai chuoi chuot phai -> chuot trai -> sneak x2). Het fight-seconds
+ *      la dung, nhung neu dang giua 1 chu ky COMBO thi danh not chu ky do roi moi dung -
+ *      khong cat ngang.
  *   3) WAITING_AFTER_FIGHT (post-fight-delay-ticks): nghi giua chung, khong click gi,
- *      truoc khi mo lai GUI cho boss/khu vuc tiep theo (tranh mo GUI qua som ngay
- *      sau khi vua danh xong).
+ *      truoc khi mo lai GUI cho boss/khu vuc tiep theo.
  */
 public class AutoBossModule extends Module {
     private enum Difficulty {
@@ -59,6 +60,17 @@ public class AutoBossModule extends Module {
         RIGHT
     }
 
+    private enum AttackMode {
+        SINGLE,
+        COMBO
+    }
+
+    private enum ComboAction {
+        RIGHT,
+        LEFT,
+        SNEAK
+    }
+
     private enum State {
         TRAVELING,
         FIGHTING,
@@ -71,7 +83,20 @@ public class AutoBossModule extends Module {
     // Slot chon do kho o menu chinh - trung so voi ZONE_SLOTS nhung la 2 GUI khac nhau,
     // tach thanh hang so rieng de tranh nham lan / sua nham khi chinh 1 trong 2 GUI.
     private static final int[] DIFFICULTY_SLOTS = {11, 13, 15};
+    // Chuot phai -> chuot trai -> sneak, lap lai 2 lan roi vong lai tu dau, dung cho AttackMode.COMBO.
+    private static final ComboAction[] COMBO_SEQUENCE = {
+        ComboAction.RIGHT, ComboAction.LEFT, ComboAction.SNEAK,
+        ComboAction.RIGHT, ComboAction.LEFT, ComboAction.SNEAK
+    };
     private static final String[] ZONE_NAMES = {"khu 1", "khu 2", "khu 3"};
+
+    // Cac buoc cua pha TRAVELING, theo dung thu tu.
+    private static final int STEP_SELECT_TOOL = 0;
+    private static final int STEP_OPEN_GUI = 1;
+    private static final int STEP_PICK_DIFFICULTY = 2;
+    private static final int STEP_PICK_BOSS = 3;
+    private static final int STEP_PICK_ZONE = 4;
+    private static final int STEP_DONE = 5;
     private static final String[][] BOSS_NAMES = {
         {"hu hon thu ho", "quy di thu", "bang nguyen chi thu", "hong lien ma co", "bach nha ma lang", "linh ve diem la", "hoa hau phe ho", "chu tuoc thuong co", "hoa nguc ma long"},
         {"thu son chi linh", "tru vuong", "tieu loi am phat", "ma anh ki vuong", "luc diem ta nhan", "cuc han thu", "chien da quy", "toa vuong ki anh", "hanashiguro"},
@@ -101,7 +126,15 @@ public class AutoBossModule extends Module {
         .defaultValue(OrderMode.QUET).build());
 
     private final Setting<ClickMode> clickMode = sgWeapon.add(new EnumSetting.Builder<ClickMode>()
-        .name("click-mode").description("Nut dung de danh boss.").defaultValue(ClickMode.LEFT).build());
+        .name("click-mode").description("Nut dung de danh boss (chi ap dung khi attack-mode = SINGLE).")
+        .defaultValue(ClickMode.LEFT)
+        .visible(() -> attackMode.get() == AttackMode.SINGLE)
+        .build());
+
+    private final Setting<AttackMode> attackMode = sgWeapon.add(new EnumSetting.Builder<AttackMode>()
+        .name("attack-mode")
+        .description("SINGLE: tu dong click lien tuc theo click-mode (chuot trai HOAC chuot phai). COMBO: lap lai chuoi chuot phai -> chuot trai -> sneak -> chuot phai -> chuot trai -> sneak, moi buoc cach nhau click-delay-ticks.")
+        .defaultValue(AttackMode.SINGLE).build());
 
     private final Setting<Integer> clickDelayTicks = sgWeapon.add(new IntSetting.Builder()
         .name("click-delay-ticks").description("So tick giua moi lan tu dong click luc danh boss.")
@@ -109,8 +142,18 @@ public class AutoBossModule extends Module {
 
     private final Setting<Integer> guiOpenDelayTicks = sgGeneral.add(new IntSetting.Builder()
         .name("gui-open-delay-ticks")
-        .description("So tick cho SAU KHI mo GUI chinh, TRUOC KHI click do kho. Thuong can lau hon gui-delay-ticks vi GUI phai tai lan dau.")
+        .description("So tick cho SAU KHI GUI chinh xuat hien tren man hinh, TRUOC KHI click do kho (de GUI kip tai xong noi dung ben trong, khong chi la khung GUI rong).")
         .defaultValue(15).range(1, 60).sliderMin(1).sliderMax(40).build());
+
+    private final Setting<Integer> toolSelectDelayTicks = sgGeneral.add(new IntSetting.Builder()
+        .name("tool-select-delay-ticks")
+        .description("So tick cho SAU KHI chon slot truc, TRUOC KHI bam chuot phai mo GUI. Fix loi lan dau bam chuot phai tu dong khong an (phai tu tay bam len GUI moi chay), do doi hotbar chua kip cap nhat xong khi bam chuot phai ngay lap tuc.")
+        .defaultValue(3).range(1, 20).sliderMin(1).sliderMax(10).build());
+
+    private final Setting<Integer> guiRetryAfterTicks = sgGeneral.add(new IntSetting.Builder()
+        .name("gui-retry-after-ticks")
+        .description("Neu da bam chuot phai (mo GUI) ma sau khoang thoi gian nay van KHONG thay GUI hien ra, tu dong chon lai slot truc va bam chuot phai lai de thu mo GUI lan nua. Mac dinh 600 tick = 30 giay.")
+        .defaultValue(600).range(20, 2400).sliderMin(100).sliderMax(1200).build());
 
     private final Setting<Integer> guiDelayTicks = sgGeneral.add(new IntSetting.Builder()
         .name("gui-delay-ticks").description("So tick cho giua cac lan click SAU KHI GUI da mo (do kho -> boss -> khu vuc).")
@@ -147,8 +190,10 @@ public class AutoBossModule extends Module {
     private int phaseTicks;
     private int travelStep;
     private int stepWaitTicks;
+    private int guiOpenWaitTicks;
     private int travelExtraTicks;
     private int clickTicks;
+    private int comboStepIndex;
     private int targetIndex;
     private final List<BossTarget> targets = new ArrayList<>();
 
@@ -194,8 +239,10 @@ public class AutoBossModule extends Module {
         phaseTicks = 0;
         travelStep = 0;
         stepWaitTicks = 0;
+        guiOpenWaitTicks = 0;
         travelExtraTicks = 0;
         clickTicks = 0;
+        comboStepIndex = 0;
         if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
     }
 
@@ -235,8 +282,9 @@ public class AutoBossModule extends Module {
     private void beginTraveling() {
         state = State.TRAVELING;
         phaseTicks = 0;
-        travelStep = 0;
+        travelStep = STEP_SELECT_TOOL;
         stepWaitTicks = 0;
+        guiOpenWaitTicks = 0;
         travelExtraTicks = 0;
     }
 
@@ -254,28 +302,30 @@ public class AutoBossModule extends Module {
         state = State.FIGHTING;
         phaseTicks = 0;
         clickTicks = 0;
+        comboStepIndex = 0;
     }
 
     /**
-     * Pha "qua boss": mo GUI roi click lan luot do kho -> boss -> khu vuc, cach nhau
-     * gui-delay-ticks (rieng buoc dau dung gui-open-delay-ticks vi GUI can thoi gian
-     * tai lan dau). Cac buoc duoc gop lai theo mang travelStepSlot() de tranh code
-     * lap 3 lan y het nhau (va tranh loi go nham slot o 1 nhanh ma quen sua nhanh kia).
+     * Pha "qua boss", chay theo tung buoc:
+     *   0) SELECT_TOOL - chon slot truc.
+     *   1) OPEN_GUI - cho tool-select-delay-ticks (de hotbar kip cap nhat, day la fix
+     *      cho loi truoc day bam chuot phai lan dau khong an) roi bam chuot phai + swing tay.
+     *   2) PICK_DIFFICULTY - cho GUI xuat hien; neu qua gui-retry-after-ticks van
+     *      chua thay GUI thi TU DONG bam chuot phai lai (chon slot + bam) roi cho tiep.
+     *      Khi GUI xuat hien, cho them gui-open-delay-ticks roi click do kho.
+     *   3) PICK_BOSS / 4) PICK_ZONE - cho gui-delay-ticks roi click boss/khu vuc.
+     *   5) DONE - da click xong ca 3, chi con cho het travel-seconds (thoi gian TP).
      *
-     * Het travel-seconds:
-     *  - Neu ca 3 buoc da click xong (travelStep >= 4): qua pha danh ngay.
-     *  - Neu chua xong VA extend-travel-if-not-ready dang bat VA chua vuot
-     *    travel-extend-max-ticks: gia han them tung tick, tiep tuc thu click,
-     *    KHONG ep qua pha danh khi con chua chon xong boss.
-     *  - Neu chua xong nhung da het gioi han gia han (hoac tinh nang gia han
-     *    dang tat): ep qua pha danh nhu cu (fallback an toan, tranh treo mai).
+     * Het travel-seconds ma chua toi buoc DONE: neu extend-travel-if-not-ready dang
+     * bat va chua vuot travel-extend-max-ticks thi gia han them thay vi ep qua pha
+     * danh khi chua chon xong boss; nguoc lai fallback ep qua nhu cu.
      */
     private void tickTraveling() {
         phaseTicks++;
         boolean timeUp = phaseTicks >= travelSeconds.get() * 20;
 
         if (timeUp) {
-            boolean canExtend = travelStep < 4
+            boolean canExtend = travelStep < STEP_DONE
                 && extendTravelIfNotReady.get()
                 && travelExtraTicks < travelExtendMaxTicks.get();
             if (!canExtend) {
@@ -285,51 +335,80 @@ public class AutoBossModule extends Module {
             travelExtraTicks++;
         }
 
-        if (travelStep == 0) {
-            openMainGui();
-            travelStep = 1;
-            stepWaitTicks = 0;
-            return;
+        switch (travelStep) {
+            case STEP_SELECT_TOOL -> {
+                selectHotbarSlot(toolSlot.get());
+                travelStep = STEP_OPEN_GUI;
+                stepWaitTicks = 0;
+            }
+            case STEP_OPEN_GUI -> {
+                if (++stepWaitTicks < toolSelectDelayTicks.get()) return;
+                fireOpenGuiInteract();
+                travelStep = STEP_PICK_DIFFICULTY;
+                stepWaitTicks = 0;
+                guiOpenWaitTicks = 0;
+            }
+            case STEP_PICK_DIFFICULTY -> tickPickDifficulty();
+            case STEP_PICK_BOSS, STEP_PICK_ZONE -> tickPickBossOrZone();
+            default -> {
+                // STEP_DONE: chi con cho het travel-seconds (thoi gian teleport/di chuyen).
+            }
         }
+    }
 
-        if (travelStep >= 1 && travelStep <= 3) {
-            if (++stepWaitTicks < travelStepDelayTicks(travelStep)) return;
-            if (mc.currentScreen instanceof HandledScreen<?> screen) {
-                int slot = travelStepSlot(travelStep, targets.get(targetIndex));
-                if (clickSlot(screen, slot)) {
-                    travelStep++;
-                    stepWaitTicks = 0;
-                }
+    private void tickPickDifficulty() {
+        if (!(mc.currentScreen instanceof HandledScreen<?> screen)) {
+            // GUI chua hien ra. Neu cho qua lau (gui-retry-after-ticks) thi coi nhu
+            // lan bam chuot phai truoc "hut" (server khong nhan), tu dong bam lai.
+            if (++guiOpenWaitTicks >= guiRetryAfterTicks.get()) {
+                selectHotbarSlot(toolSlot.get());
+                fireOpenGuiInteract();
+                guiOpenWaitTicks = 0;
+                stepWaitTicks = 0;
             }
             return;
         }
 
-        // travelStep == 4: da click xong het 3 buoc - chi con cho het travel-seconds
-        // (thoi gian teleport/di chuyen toi noi) roi tu dong qua pha danh.
+        if (++stepWaitTicks < guiOpenDelayTicks.get()) return;
+        BossTarget target = targets.get(targetIndex);
+        if (clickSlot(screen, DIFFICULTY_SLOTS[target.difficulty.ordinal()])) {
+            travelStep = STEP_PICK_BOSS;
+            stepWaitTicks = 0;
+        }
     }
 
-    /** Slot can click cho tung buoc cua pha TRAVELING (1 = do kho, 2 = boss, 3 = khu vuc). */
-    private int travelStepSlot(int step, BossTarget target) {
-        return switch (step) {
-            case 1 -> DIFFICULTY_SLOTS[target.difficulty.ordinal()];
-            case 2 -> target.difficulty.bossSlots[target.bossIndex];
-            case 3 -> ZONE_SLOTS[target.zoneIndex];
-            default -> -1;
-        };
+    private void tickPickBossOrZone() {
+        if (++stepWaitTicks < guiDelayTicks.get()) return;
+        if (mc.currentScreen instanceof HandledScreen<?> screen) {
+            BossTarget target = targets.get(targetIndex);
+            int slot = travelStep == STEP_PICK_BOSS
+                ? target.difficulty.bossSlots[target.bossIndex]
+                : ZONE_SLOTS[target.zoneIndex];
+            if (clickSlot(screen, slot)) {
+                travelStep++;
+                stepWaitTicks = 0;
+            }
+        }
     }
 
-    /** Buoc dau tien (chon do kho, ngay sau khi mo GUI) can cho lau hon vi GUI moi tai. */
-    private int travelStepDelayTicks(int step) {
-        return step == 1 ? guiOpenDelayTicks.get() : guiDelayTicks.get();
-    }
-
+    /**
+     * Neu dang AttackMode.COMBO, "1 hanh dong" hoan chinh la 1 chu ky du 6 buoc
+     * (chuot phai/trai/sneak x2). comboStepIndex == 0 nghia la vua ket thuc dung
+     * 1 chu ky (hoac chua bat dau buoc nao). Het fight-seconds ma dang giua chung
+     * (comboStepIndex != 0) thi KHONG cat ngang - de danh xong het chu ky hien tai
+     * roi moi chuyen sang pha nghi + TP, tranh bi dung do dang giu sneak/nua chung.
+     */
     private void tickFighting() {
         if (mc.currentScreen != null) {
             releaseClick();
             return;
         }
 
-        if (++phaseTicks >= fightSeconds.get() * 20) {
+        phaseTicks++;
+        boolean timeUp = phaseTicks >= fightSeconds.get() * 20;
+        boolean cycleBoundary = attackMode.get() == AttackMode.SINGLE || comboStepIndex == 0;
+
+        if (timeUp && cycleBoundary) {
             targetIndex++;
             if (targetIndex >= targets.size()) targetIndex = 0;
             beginWaitingAfterFight();
@@ -338,15 +417,35 @@ public class AutoBossModule extends Module {
 
         if (clickTicks > 0) clickTicks--;
         if (clickTicks == 0) {
-            performAttackPulse();
+            performAttackStep();
             clickTicks = clickDelayTicks.get();
         }
     }
 
+    private void performAttackStep() {
+        if (attackMode.get() == AttackMode.SINGLE) {
+            performAttackPulse();
+            return;
+        }
+        performComboStep();
+    }
+
+    private void performComboStep() {
+        ComboAction action = COMBO_SEQUENCE[comboStepIndex];
+        if (action == ComboAction.SNEAK) {
+            setSneakPressed(true);
+        } else {
+            // Tha sneak truoc khi click, phong truong hop buoc truoc la SNEAK va con dang giu.
+            setSneakPressed(false);
+            if (action == ComboAction.RIGHT) Utils.rightClick(); else Utils.leftClick();
+        }
+        comboStepIndex = (comboStepIndex + 1) % COMBO_SEQUENCE.length;
+    }
+
     /**
      * Pha cho THEM sau khi het fight-seconds, TRUOC KHI mo GUI cho boss/khu vuc
-     * tiep theo. Khong click gi ca trong pha nay - chi cho du postFightDelayTicks
-     * roi moi goi beginTraveling() (buoc dau tien cua TRAVELING la openMainGui()).
+     * tiep theo. Khong click gi ca trong pha nay - chi cho du post-fight-delay-ticks
+     * roi moi goi beginTraveling() (buoc dau tien cua TRAVELING la chon slot truc).
      */
     private void tickWaitingAfterFight() {
         if (++phaseTicks >= postFightDelayTicks.get()) {
@@ -369,9 +468,8 @@ public class AutoBossModule extends Module {
         }
     }
 
-    private void openMainGui() {
+    private void fireOpenGuiInteract() {
         if (mc.interactionManager == null || mc.player == null) return;
-        selectHotbarSlot(toolSlot.get());
         ActionResult result = mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
         if (result.isAccepted()) mc.player.swingHand(Hand.MAIN_HAND);
     }
@@ -393,5 +491,11 @@ public class AutoBossModule extends Module {
         if (mc.options == null) return;
         mc.options.attackKey.setPressed(false);
         mc.options.useKey.setPressed(false);
+        mc.options.sneakKey.setPressed(false);
+    }
+
+    private void setSneakPressed(boolean pressed) {
+        if (mc.options == null) return;
+        mc.options.sneakKey.setPressed(pressed);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.autocropfarmer.modules;
 
 import com.example.autocropfarmer.AutoCropFarmerAddon;
+import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.EnumSetting;
@@ -26,9 +27,11 @@ import java.util.List;
  * KIEN TRUC: khong xac nhan GUI/chat, chay theo 3 pha thoi gian, lap lai lien tuc:
  *   1) TRAVELING (travel-seconds): chon slot truc -> cho tool-select-delay-ticks ->
  *      bam chuot phai mo GUI -> click do kho -> boss -> khu vuc, cach nhau
- *      gui-open-delay-ticks / gui-delay-ticks. Cooldown mo GUI (neu co) la cooldown
- *      PHIA SERVER, client khong biet truoc - nen chi co the bam roi cho; neu sau
- *      gui-retry-after-ticks van khong thay GUI thi tu dong bam chuot phai lai.
+ *      gui-open-delay-ticks / gui-delay-ticks. Server co the tu choi mo GUI kem
+ *      dong chat "can cho Ns de dung lai Truyen Tong Lenh nay!" - module doc thang
+ *      dong chat nay (onReceiveMessage) de biet CHINH XAC can cho bao lau roi moi
+ *      thu bam lai, thay vi doan mo. Neu khong thay dong chat nao (VD do lag/mat goi
+ *      tin) thi van co retry du phong sau gui-retry-after-ticks.
  *      Het travel-seconds ma cac buoc chon chua xong thi duoc gia han them (toi da
  *      travel-extend-max-ticks, neu extend-travel-if-not-ready dang bat).
  *   2) FIGHTING: attack-mode = SINGLE dung fight-seconds (thoi gian) de dung, click
@@ -208,6 +211,7 @@ public class AutoBossModule extends Module {
     private int comboStepIndex;
     private int comboCyclesDone;
     private int targetIndex;
+    private int commandCooldownTicks;
     private final List<BossTarget> targets = new ArrayList<>();
 
     public AutoBossModule() {
@@ -257,6 +261,7 @@ public class AutoBossModule extends Module {
         clickTicks = 0;
         comboStepIndex = 0;
         comboCyclesDone = 0;
+        commandCooldownTicks = 0;
         if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
     }
 
@@ -284,6 +289,8 @@ public class AutoBossModule extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
+        if (commandCooldownTicks > 0) commandCooldownTicks--;
+
         if (mc.player == null || state == null) return;
 
         switch (state) {
@@ -291,6 +298,34 @@ public class AutoBossModule extends Module {
             case FIGHTING -> tickFighting();
             case WAITING_AFTER_FIGHT -> tickWaitingAfterFight();
         }
+    }
+
+    /**
+     * FIX GOC (dung nghia): server bao cooldown that su bang dong chat mau do dang
+     * "Ban can cho 30s de dung lai Truyen Tong Lenh nay!" - doc thang so giay tu day
+     * roi cho DUNG boi nhieu, thay vi retry mo GUI theo chu ky co dinh doan mo (co the
+     * qua ngan so voi cooldown that, gay bam lai vo ich va nhan them cooldown moi).
+     */
+    @EventHandler
+    private void onReceiveMessage(ReceiveMessageEvent event) {
+        if (state == null) return;
+        String text = event.getMessage().getString();
+        if (!text.contains("Tống Lệnh")) return;
+
+        int idx = text.indexOf("chờ");
+        if (idx < 0) return;
+
+        StringBuilder digits = new StringBuilder();
+        for (int i = idx + "chờ".length(); i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (Character.isDigit(c)) digits.append(c);
+            else if (digits.length() > 0) break;
+        }
+        if (digits.isEmpty()) return;
+
+        int seconds = Integer.parseInt(digits.toString());
+        int ticks = seconds * 20 + 20; // +1 giay dem an toan cho do tre goi/xu ly packet
+        if (ticks > commandCooldownTicks) commandCooldownTicks = ticks;
     }
 
     private void beginTraveling() {
@@ -358,6 +393,7 @@ public class AutoBossModule extends Module {
             }
             case STEP_OPEN_GUI -> {
                 if (++stepWaitTicks < toolSelectDelayTicks.get()) return;
+                if (commandCooldownTicks > 0) return; // server dang cam dung lenh nay, cho het cooldown that su
                 fireOpenGuiInteract();
                 travelStep = STEP_PICK_DIFFICULTY;
                 stepWaitTicks = 0;
@@ -373,11 +409,12 @@ public class AutoBossModule extends Module {
 
     private void tickPickDifficulty() {
         if (!(mc.currentScreen instanceof HandledScreen<?> screen)) {
-            // GUI chua hien ra. Cooldown o day (neu co) la cooldown PHIA SERVER, client
-            // khong biet truoc khi nao het - nen khong the "cho het cooldown roi moi bam".
-            // Cach duy nhat kha thi: bam, roi neu qua gui-retry-after-ticks van khong thay
-            // GUI thi coi nhu lan truoc bi server chan/hut, tu dong bam lai dinh ky.
-            if (++guiOpenWaitTicks >= guiRetryAfterTicks.get()) {
+            // GUI chua hien ra. Neu server vua bao cooldown qua chat (commandCooldownTicks > 0)
+            // thi KHONG bam lai - cho dung het cooldown that su. Chi khi het cooldown VA da
+            // qua gui-retry-after-ticks (phong truong hop khong co cooldown ma chi la "hut"
+            // do lag/mat goi tin) thi moi tu dong bam chuot phai lai.
+            guiOpenWaitTicks++;
+            if (commandCooldownTicks <= 0 && guiOpenWaitTicks >= guiRetryAfterTicks.get()) {
                 selectHotbarSlot(toolSlot.get());
                 fireOpenGuiInteract();
                 guiOpenWaitTicks = 0;

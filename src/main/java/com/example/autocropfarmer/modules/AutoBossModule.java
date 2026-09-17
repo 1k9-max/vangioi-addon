@@ -11,6 +11,7 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
@@ -149,7 +150,7 @@ public class AutoBossModule extends Module {
 
     private final Setting<Integer> toolSelectDelayTicks = sgGeneral.add(new IntSetting.Builder()
         .name("tool-select-delay-ticks")
-        .description("So tick cho SAU KHI chon slot truc, TRUOC KHI bam chuot phai mo GUI. Fix loi lan dau bam chuot phai tu dong khong an (phai tu tay bam len GUI moi chay), do doi hotbar chua kip cap nhat xong khi bam chuot phai ngay lap tuc.")
+        .description("So tick cho SAU KHI chon slot truc (da gui UpdateSelectedSlotC2SPacket len server), TRUOC KHI bam chuot phai mo GUI - de goi packet chon slot chac chan toi server truoc khi goi packet bam chuot phai, tranh truong hop 2 packet toi khong dung thu tu do do tre mang.")
         .defaultValue(3).range(1, 20).sliderMin(1).sliderMax(10).build());
 
     private final Setting<Integer> guiRetryAfterTicks = sgGeneral.add(new IntSetting.Builder()
@@ -504,8 +505,20 @@ public class AutoBossModule extends Module {
         return true;
     }
 
+    /**
+     * FIX GOC: mac dinh setSelectedSlot() CHI doi slot phia client, KHONG bao cho
+     * server biet. Vi vay khi bam chuot phai (interactItem), server van xu ly theo
+     * item no tuong ban dang cam (slot cu) -> khong mo GUI, y het khi ban tu bam
+     * hotbar 1 lan thi lai chay dung (vi luc do client tu gui packet dong bo that su).
+     * Phai tu gui UpdateSelectedSlotC2SPacket len server thi moi dong bo dung.
+     */
     private void selectHotbarSlot(int slot) {
-        if (mc.player != null) mc.player.getInventory().setSelectedSlot(slot - 1);
+        if (mc.player == null) return;
+        int index = slot - 1;
+        mc.player.getInventory().setSelectedSlot(index);
+        if (mc.player.networkHandler != null) {
+            mc.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(index));
+        }
     }
 
     private void releaseClick() {

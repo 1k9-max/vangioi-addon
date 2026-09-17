@@ -24,14 +24,16 @@ import java.util.List;
  *
  * KIEN TRUC: khong xac nhan GUI/chat, chay theo 3 pha thoi gian, lap lai lien tuc:
  *   1) TRAVELING (travel-seconds): chon slot truc -> cho tool-select-delay-ticks ->
- *      bam chuot phai mo GUI (tu dong bam lai neu sau gui-retry-after-ticks van
- *      khong thay GUI) -> click do kho -> boss -> khu vuc, cach nhau gui-open-delay-ticks
- *      / gui-delay-ticks. Het travel-seconds la qua pha danh; neu extend-travel-if-not-ready
- *      bat va cac buoc chon chua xong thi duoc gia han them (toi da travel-extend-max-ticks).
- *   2) FIGHTING (fight-seconds): attack-mode = SINGLE (click lien tuc theo click-mode)
- *      hoac COMBO (lap lai chuoi chuot phai -> chuot trai -> sneak x2). Het fight-seconds
- *      la dung, nhung neu dang giua 1 chu ky COMBO thi danh not chu ky do roi moi dung -
- *      khong cat ngang.
+ *      bam chuot phai mo GUI -> click do kho -> boss -> khu vuc, cach nhau
+ *      gui-open-delay-ticks / gui-delay-ticks. Cooldown mo GUI (neu co) la cooldown
+ *      PHIA SERVER, client khong biet truoc - nen chi co the bam roi cho; neu sau
+ *      gui-retry-after-ticks van khong thay GUI thi tu dong bam chuot phai lai.
+ *      Het travel-seconds ma cac buoc chon chua xong thi duoc gia han them (toi da
+ *      travel-extend-max-ticks, neu extend-travel-if-not-ready dang bat).
+ *   2) FIGHTING: attack-mode = SINGLE dung fight-seconds (thoi gian) de dung, click
+ *      lien tuc theo click-mode. attack-mode = COMBO dung combo-repeat-count (SO LAN
+ *      LAP LAI chu ky) de dung thay vi thoi gian - lap chuoi chuot phai -> chuot trai
+ *      -> sneak -> chuot phai -> chuot trai -> sneak, dem du 1 chu ky moi tinh 1 lan.
  *   3) WAITING_AFTER_FIGHT (post-fight-delay-ticks): nghi giua chung, khong click gi,
  *      truoc khi mo lai GUI cho boss/khu vuc tiep theo.
  */
@@ -171,13 +173,22 @@ public class AutoBossModule extends Module {
 
     private final Setting<Integer> travelExtendMaxTicks = sgGeneral.add(new IntSetting.Builder()
         .name("travel-extend-max-ticks")
-        .description("Gioi han so tick duoc gia han them (chi ap dung khi extend-travel-if-not-ready bat), tranh treo vinh vien neu GUI server bi loi/khong phan hoi.")
-        .defaultValue(100).range(0, 600).sliderMin(0).sliderMax(200).build());
+        .description("Gioi han so tick duoc gia han them (chi ap dung khi extend-travel-if-not-ready bat). Neu server hay cho truc cooldown toi 30s (600 tick), nen de gia tri nay >= 600 de bot cho het cooldown ma khong bi ep qua pha danh giua chung. Tranh treo vinh vien neu GUI server bi loi that su.")
+        .defaultValue(700).range(0, 1200).sliderMin(0).sliderMax(800).build());
 
     private final Setting<Integer> fightSeconds = sgWeapon.add(new IntSetting.Builder()
         .name("fight-seconds")
-        .description("Thoi gian tu dong click de danh boss. Het gio la tu chuyen qua boss/khu vuc tiep theo du dang danh trung hay khong.")
-        .defaultValue(40).range(1, 3600).sliderMin(1).sliderMax(300).build());
+        .description("Thoi gian tu dong click de danh boss (chi ap dung khi attack-mode = SINGLE). Het gio la tu chuyen qua boss/khu vuc tiep theo du dang danh trung hay khong.")
+        .defaultValue(40).range(1, 3600).sliderMin(1).sliderMax(300)
+        .visible(() -> attackMode.get() == AttackMode.SINGLE)
+        .build());
+
+    private final Setting<Integer> comboRepeatCount = sgWeapon.add(new IntSetting.Builder()
+        .name("combo-repeat-count")
+        .description("Chi ap dung khi attack-mode = COMBO. So lan lap lai chu ky (chuot phai -> chuot trai -> sneak -> chuot phai -> chuot trai -> sneak) truoc khi chuyen qua boss/khu vuc tiep theo - THAY THE cho fight-seconds (khong dung thoi gian nua ma dung so lan combo).")
+        .defaultValue(5).range(1, 100).sliderMin(1).sliderMax(30)
+        .visible(() -> attackMode.get() == AttackMode.COMBO)
+        .build());
 
     private final Setting<Integer> postFightDelayTicks = sgGeneral.add(new IntSetting.Builder()
         .name("post-fight-delay-ticks")
@@ -194,6 +205,7 @@ public class AutoBossModule extends Module {
     private int travelExtraTicks;
     private int clickTicks;
     private int comboStepIndex;
+    private int comboCyclesDone;
     private int targetIndex;
     private final List<BossTarget> targets = new ArrayList<>();
 
@@ -243,6 +255,7 @@ public class AutoBossModule extends Module {
         travelExtraTicks = 0;
         clickTicks = 0;
         comboStepIndex = 0;
+        comboCyclesDone = 0;
         if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
     }
 
@@ -303,6 +316,7 @@ public class AutoBossModule extends Module {
         phaseTicks = 0;
         clickTicks = 0;
         comboStepIndex = 0;
+        comboCyclesDone = 0;
     }
 
     /**
@@ -358,8 +372,10 @@ public class AutoBossModule extends Module {
 
     private void tickPickDifficulty() {
         if (!(mc.currentScreen instanceof HandledScreen<?> screen)) {
-            // GUI chua hien ra. Neu cho qua lau (gui-retry-after-ticks) thi coi nhu
-            // lan bam chuot phai truoc "hut" (server khong nhan), tu dong bam lai.
+            // GUI chua hien ra. Cooldown o day (neu co) la cooldown PHIA SERVER, client
+            // khong biet truoc khi nao het - nen khong the "cho het cooldown roi moi bam".
+            // Cach duy nhat kha thi: bam, roi neu qua gui-retry-after-ticks van khong thay
+            // GUI thi coi nhu lan truoc bi server chan/hut, tu dong bam lai dinh ky.
             if (++guiOpenWaitTicks >= guiRetryAfterTicks.get()) {
                 selectHotbarSlot(toolSlot.get());
                 fireOpenGuiInteract();
@@ -392,11 +408,11 @@ public class AutoBossModule extends Module {
     }
 
     /**
-     * Neu dang AttackMode.COMBO, "1 hanh dong" hoan chinh la 1 chu ky du 6 buoc
-     * (chuot phai/trai/sneak x2). comboStepIndex == 0 nghia la vua ket thuc dung
-     * 1 chu ky (hoac chua bat dau buoc nao). Het fight-seconds ma dang giua chung
-     * (comboStepIndex != 0) thi KHONG cat ngang - de danh xong het chu ky hien tai
-     * roi moi chuyen sang pha nghi + TP, tranh bi dung do dang giu sneak/nua chung.
+     * SINGLE: dieu kien dung la thoi gian (fight-seconds), giong cu.
+     * COMBO: dieu kien dung la SO LAN LAP LAI chu ky 6 buoc (combo-repeat-count),
+     * KHONG dung fight-seconds nua. Vi comboCyclesDone chi tang dung luc 1 chu ky
+     * vua hoan tat (xem performComboStep), dieu kien nay tu nhien khong bao gio
+     * cat ngang giua chung mot chu ky dang danh do.
      */
     private void tickFighting() {
         if (mc.currentScreen != null) {
@@ -404,11 +420,15 @@ public class AutoBossModule extends Module {
             return;
         }
 
-        phaseTicks++;
-        boolean timeUp = phaseTicks >= fightSeconds.get() * 20;
-        boolean cycleBoundary = attackMode.get() == AttackMode.SINGLE || comboStepIndex == 0;
+        boolean shouldStop;
+        if (attackMode.get() == AttackMode.COMBO) {
+            shouldStop = comboCyclesDone >= comboRepeatCount.get();
+        } else {
+            phaseTicks++;
+            shouldStop = phaseTicks >= fightSeconds.get() * 20;
+        }
 
-        if (timeUp && cycleBoundary) {
+        if (shouldStop) {
             targetIndex++;
             if (targetIndex >= targets.size()) targetIndex = 0;
             beginWaitingAfterFight();
@@ -440,6 +460,7 @@ public class AutoBossModule extends Module {
             if (action == ComboAction.RIGHT) Utils.rightClick(); else Utils.leftClick();
         }
         comboStepIndex = (comboStepIndex + 1) % COMBO_SEQUENCE.length;
+        if (comboStepIndex == 0) comboCyclesDone++;
     }
 
     /**

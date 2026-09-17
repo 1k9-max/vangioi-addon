@@ -21,6 +21,12 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,6 +126,7 @@ public class AutoBossModule extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgWeapon = settings.createGroup("Weapon");
     private final SettingGroup sgBoss = settings.createGroup("Boss Selection");
+    private final SettingGroup sgDebug = settings.createGroup("Debug");
 
     private final Setting<Integer> weaponSlot = sgGeneral.add(new IntSetting.Builder()
         .name("weapon-slot")
@@ -207,6 +214,25 @@ public class AutoBossModule extends Module {
         .description("So tick cho THEM sau khi het fight-seconds, TRUOC KHI mo GUI/chon boss-khu vuc tiep theo (de server kip xu ly, tranh mo GUI qua som lam hut click).")
         .defaultValue(20).range(0, 200).sliderMin(0).sliderMax(100).build());
 
+    private final Setting<Boolean> debugLog = sgDebug.add(new BoolSetting.Builder()
+        .name("debug-log")
+        .description("Bat de ghi FULL log (tung buoc, tung state, moi lan click/mo GUI, loi...) ra file .log trong thu muc config/meteor-client/auto-boss-logs, tinh tu luc BAT module den luc TAT.")
+        .defaultValue(false).build());
+
+    private final Setting<Boolean> debugChatEcho = sgDebug.add(new BoolSetting.Builder()
+        .name("debug-chat-echo")
+        .description("Ngoai viec ghi file, cung in tung dong log ra chat/console cua client (de theo doi truc tiep). Co the spam chat neu delay ngan.")
+        .defaultValue(false)
+        .visible(() -> debugLog.get())
+        .build());
+
+    private final Setting<Boolean> debugIncludeTickSpam = sgDebug.add(new BoolSetting.Builder()
+        .name("debug-include-tick-spam")
+        .description("Bat de log CA cac dong lap lai moi tick trong luc cho (dem stepWaitTicks/phaseTicks...). Mac dinh TAT vi rat nhieu dong, chi nen bat khi can soi ky mot doan cu the.")
+        .defaultValue(false)
+        .visible(() -> debugLog.get())
+        .build());
+
     private final List<Setting<Boolean>> bossSettings = new ArrayList<>();
 
     private State state;
@@ -221,6 +247,12 @@ public class AutoBossModule extends Module {
     private int targetIndex;
     private int commandCooldownTicks;
     private final List<BossTarget> targets = new ArrayList<>();
+
+    // --- Debug logging ---
+    private static final DateTimeFormatter DEBUG_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    private PrintWriter debugWriter;
+    private File debugLogFile;
+    private long debugTickCounter;
 
     public AutoBossModule() {
         super(AutoCropFarmerAddon.CATEGORY, "auto-boss", "Tu dong chon khu, boss va danh boss theo GUI server.");
@@ -240,15 +272,20 @@ public class AutoBossModule extends Module {
     @Override
     public void onActivate() {
         releaseClick();
+        debugTickCounter = 0;
+        openDebugLog();
+        log("=== Module BAT (onActivate) === weapon-slot=%d tool-slot=%d difficulty=%s farm-mode=%s attack-mode=%s"
+            .formatted(weaponSlot.get(), toolSlot.get(), difficulty.get(), orderMode.get(), attackMode.get()));
+
         if (weaponSlot.get().equals(toolSlot.get())) {
-            error("weapon-slot va tool-slot khong duoc trung nhau.");
+            logError("weapon-slot va tool-slot khong duoc trung nhau.");
             toggle();
             return;
         }
 
         buildTargets();
         if (targets.isEmpty()) {
-            error("Chua chon boss nao trong difficulty hien tai.");
+            logError("Chua chon boss nao trong difficulty hien tai.");
             toggle();
             return;
         }
@@ -260,6 +297,7 @@ public class AutoBossModule extends Module {
     @Override
     public void onDeactivate() {
         releaseClick();
+        log("=== Module TAT (onDeactivate) === state cuoi cung=%s".formatted(state));
         state = null;
         phaseTicks = 0;
         travelStep = 0;
@@ -271,6 +309,7 @@ public class AutoBossModule extends Module {
         comboCyclesDone = 0;
         commandCooldownTicks = 0;
         if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
+        closeDebugLog();
     }
 
     private void buildTargets() {
@@ -293,10 +332,64 @@ public class AutoBossModule extends Module {
                 }
             }
         }
+        log("buildTargets() -> " + targets.size() + " muc tieu: " + targets);
+    }
+
+    /**
+     * Mo file log moi (ten kem timestamp) trong .minecraft/meteor-client/auto-boss-logs/
+     * neu debug-log dang bat. Loi ghi file (VD khong co quyen) chi bao qua error(),
+     * KHONG lam crash/tat module.
+     */
+    private void openDebugLog() {
+        if (!debugLog.get()) return;
+        try {
+            File dir = new File(mc.runDirectory, "meteor-client/auto-boss-logs");
+            if (!dir.exists() && !dir.mkdirs()) {
+                error("Khong tao duoc thu muc log: " + dir.getAbsolutePath());
+                return;
+            }
+            String fileName = "auto-boss-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".log";
+            debugLogFile = new File(dir, fileName);
+            debugWriter = new PrintWriter(new FileWriter(debugLogFile, true), true);
+            info("Debug log: " + debugLogFile.getAbsolutePath());
+        } catch (IOException e) {
+            error("Khong mo duoc file debug log: " + e.getMessage());
+            debugWriter = null;
+        }
+    }
+
+    private void closeDebugLog() {
+        if (debugWriter != null) {
+            debugWriter.flush();
+            debugWriter.close();
+            debugWriter = null;
+        }
+    }
+
+    /**
+     * Ghi 1 dong log neu debug-log dang bat: [thoi gian thuc][so tick tu luc bat] noi dung.
+     * Neu debug-chat-echo cung bat thi in them ra chat/console qua info().
+     */
+    private void log(String message) {
+        if (!debugLog.get()) return;
+        String line = "[%s][tick %d] %s".formatted(LocalDateTime.now().format(DEBUG_TIME_FMT), debugTickCounter, message);
+        if (debugWriter != null) {
+            debugWriter.println(line);
+        }
+        if (debugChatEcho.get()) {
+            info(message);
+        }
+    }
+
+    /** Ghi log muc [ERROR] roi goi error() binh thuong cua Module (bao trong chat) nhu cu. */
+    private void logError(String message) {
+        log("[ERROR] " + message);
+        error(message);
     }
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
+        debugTickCounter++;
         if (commandCooldownTicks > 0) commandCooldownTicks--;
 
         if (mc.player == null || state == null) return;
@@ -341,6 +434,7 @@ public class AutoBossModule extends Module {
 
         int seconds = Integer.parseInt(digits.toString());
         int ticks = seconds * 20 + 20; // +1 giay dem an toan cho do tre goi/xu ly packet
+        log("onReceiveMessage: phat hien cooldown tu chat = " + seconds + "s (" + ticks + " tick). Noi dung: \"" + text + "\"");
         if (ticks > commandCooldownTicks) commandCooldownTicks = ticks;
     }
 
@@ -351,12 +445,16 @@ public class AutoBossModule extends Module {
         stepWaitTicks = 0;
         guiOpenWaitTicks = 0;
         travelExtraTicks = 0;
+        BossTarget target = targets.get(targetIndex);
+        log("-> TRAVELING (target %d/%d: do-kho=%s boss-index=%d khu=%s)"
+            .formatted(targetIndex + 1, targets.size(), target.difficulty(), target.bossIndex(), ZONE_NAMES[target.zoneIndex()]));
     }
 
     private void beginWaitingAfterFight() {
         releaseClick();
         state = State.WAITING_AFTER_FIGHT;
         phaseTicks = 0;
+        log("-> WAITING_AFTER_FIGHT (cho %d tick)".formatted(postFightDelayTicks.get()));
     }
 
     private void beginFighting() {
@@ -369,6 +467,9 @@ public class AutoBossModule extends Module {
         clickTicks = 0;
         comboStepIndex = 0;
         comboCyclesDone = 0;
+        log("-> FIGHTING (attack-mode=%s, travel-buoc-dat-toi=%d/%d%s)"
+            .formatted(attackMode.get(), travelStep, STEP_DONE,
+                travelStep < STEP_DONE ? " [EP QUA, CHUA CHON XONG!]" : ""));
     }
 
     /**
@@ -395,8 +496,18 @@ public class AutoBossModule extends Module {
                 && extendTravelIfNotReady.get()
                 && travelExtraTicks < travelExtendMaxTicks.get();
             if (!canExtend) {
+                if (travelStep < STEP_DONE) {
+                    logError("Het travel-seconds nhung chua chon xong (travelStep=" + travelStep
+                        + "/" + STEP_DONE + "). EP QUA pha danh (khong the/khong duoc gia han them).");
+                } else if (debugIncludeTickSpam.get()) {
+                    log("Het travel-seconds, da chon xong (STEP_DONE) -> chuyen sang FIGHTING.");
+                }
                 beginFighting();
                 return;
+            }
+            if (travelExtraTicks == 0) {
+                log("Het travel-seconds nhung chua chon xong (travelStep=" + travelStep
+                    + "), bat dau GIA HAN (toi da " + travelExtendMaxTicks.get() + " tick).");
             }
             travelExtraTicks++;
         }
@@ -404,18 +515,25 @@ public class AutoBossModule extends Module {
         switch (travelStep) {
             case STEP_SELECT_TOOL -> {
                 if (!isToolItemPresent()) {
-                    error("Khong tim thay item Truyen Tong Lenh o tool-slot (" + toolSlot.get() + "). Kiem tra lai hotbar. Dang tat module.");
+                    logError("Khong tim thay item Truyen Tong Lenh o tool-slot (" + toolSlot.get() + "). Kiem tra lai hotbar. Dang tat module.");
                     toggle();
                     return;
                 }
+                log("STEP_SELECT_TOOL: da xac minh item o tool-slot " + toolSlot.get() + ", chon slot.");
                 selectHotbarSlot(toolSlot.get());
                 travelStep = STEP_OPEN_GUI;
                 stepWaitTicks = 0;
             }
             case STEP_OPEN_GUI -> {
                 if (++stepWaitTicks < toolSelectDelayTicks.get()) return;
-                if (commandCooldownTicks > 0) return; // server dang cam dung lenh nay, cho het cooldown that su
+                if (commandCooldownTicks > 0) {
+                    if (debugIncludeTickSpam.get()) {
+                        log("STEP_OPEN_GUI: dang cho commandCooldownTicks=" + commandCooldownTicks + " truoc khi bam chuot phai.");
+                    }
+                    return; // server dang cam dung lenh nay, cho het cooldown that su
+                }
                 fireOpenGuiInteract();
+                log("STEP_OPEN_GUI: da bam chuot phai mo GUI, chuyen sang STEP_PICK_DIFFICULTY.");
                 travelStep = STEP_PICK_DIFFICULTY;
                 stepWaitTicks = 0;
                 guiOpenWaitTicks = 0;
@@ -436,6 +554,7 @@ public class AutoBossModule extends Module {
             // do lag/mat goi tin) thi moi tu dong bam chuot phai lai.
             guiOpenWaitTicks++;
             if (commandCooldownTicks <= 0 && guiOpenWaitTicks >= guiRetryAfterTicks.get()) {
+                log("GUI chua xuat hien sau " + guiOpenWaitTicks + " tick (khong co cooldown) -> RETRY: chon slot + bam chuot phai lai.");
                 selectHotbarSlot(toolSlot.get());
                 fireOpenGuiInteract();
                 guiOpenWaitTicks = 0;
@@ -446,9 +565,13 @@ public class AutoBossModule extends Module {
 
         if (++stepWaitTicks < guiOpenDelayTicks.get()) return;
         BossTarget target = targets.get(targetIndex);
-        if (clickSlot(screen, DIFFICULTY_SLOTS[target.difficulty.ordinal()])) {
+        int slot = DIFFICULTY_SLOTS[target.difficulty().ordinal()];
+        if (clickSlot(screen, slot)) {
+            log("STEP_PICK_DIFFICULTY: click slot " + slot + " (do kho=" + target.difficulty() + ") -> chuyen sang STEP_PICK_BOSS.");
             travelStep = STEP_PICK_BOSS;
             stepWaitTicks = 0;
+        } else {
+            logError("STEP_PICK_DIFFICULTY: click slot " + slot + " THAT BAI (slot ngoai gioi han handler?).");
         }
     }
 
@@ -457,12 +580,18 @@ public class AutoBossModule extends Module {
         if (mc.currentScreen instanceof HandledScreen<?> screen) {
             BossTarget target = targets.get(targetIndex);
             int slot = travelStep == STEP_PICK_BOSS
-                ? target.difficulty.bossSlots[target.bossIndex]
-                : ZONE_SLOTS[target.zoneIndex];
+                ? target.difficulty().bossSlots[target.bossIndex()]
+                : ZONE_SLOTS[target.zoneIndex()];
+            String stepName = travelStep == STEP_PICK_BOSS ? "STEP_PICK_BOSS" : "STEP_PICK_ZONE";
             if (clickSlot(screen, slot)) {
+                log(stepName + ": click slot " + slot + " thanh cong -> travelStep=" + (travelStep + 1) + ".");
                 travelStep++;
                 stepWaitTicks = 0;
+            } else {
+                logError(stepName + ": click slot " + slot + " THAT BAI (slot ngoai gioi han handler?).");
             }
+        } else if (debugIncludeTickSpam.get()) {
+            log((travelStep == STEP_PICK_BOSS ? "STEP_PICK_BOSS" : "STEP_PICK_ZONE") + ": khong co GUI (mc.currentScreen == null) dung tick nay.");
         }
     }
 
@@ -488,6 +617,8 @@ public class AutoBossModule extends Module {
         }
 
         if (shouldStop) {
+            log("FIGHTING xong (attack-mode=" + attackMode.get() + ", phaseTicks=" + phaseTicks
+                + ", comboCyclesDone=" + comboCyclesDone + "). Chuyen sang muc tieu ke tiep.");
             targetIndex++;
             if (targetIndex >= targets.size()) targetIndex = 0;
             beginWaitingAfterFight();
@@ -549,9 +680,17 @@ public class AutoBossModule extends Module {
     }
 
     private void fireOpenGuiInteract() {
-        if (mc.interactionManager == null || mc.player == null) return;
+        if (mc.interactionManager == null || mc.player == null) {
+            logError("fireOpenGuiInteract(): interactionManager hoac player null, bo qua.");
+            return;
+        }
         ActionResult result = mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
-        if (result.isAccepted()) mc.player.swingHand(Hand.MAIN_HAND);
+        if (result.isAccepted()) {
+            mc.player.swingHand(Hand.MAIN_HAND);
+            if (debugIncludeTickSpam.get()) log("fireOpenGuiInteract(): interactItem() ACCEPTED, da swing tay.");
+        } else if (debugIncludeTickSpam.get()) {
+            log("fireOpenGuiInteract(): interactItem() tra ve " + result + " (KHONG accepted).");
+        }
     }
 
     private boolean clickSlot(HandledScreen<?> screen, int slot) {
@@ -586,11 +725,17 @@ public class AutoBossModule extends Module {
      * Phai tu gui UpdateSelectedSlotC2SPacket len server thi moi dong bo dung.
      */
     private void selectHotbarSlot(int slot) {
-        if (mc.player == null) return;
+        if (mc.player == null) {
+            logError("selectHotbarSlot(" + slot + "): mc.player null, bo qua.");
+            return;
+        }
         int index = slot - 1;
         mc.player.getInventory().setSelectedSlot(index);
         if (mc.player.networkHandler != null) {
             mc.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(index));
+            if (debugIncludeTickSpam.get()) log("selectHotbarSlot(" + slot + "): da set + gui UpdateSelectedSlotC2SPacket.");
+        } else {
+            logError("selectHotbarSlot(" + slot + "): networkHandler null, KHONG gui duoc packet len server!");
         }
     }
 

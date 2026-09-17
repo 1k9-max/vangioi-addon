@@ -1,7 +1,7 @@
-# Auto Crop Farmer (Meteor Client Addon)
+# Van Gioi Addon (Meteor Client Addon)
 
-Addon cho Meteor Client (Fabric, Minecraft 1.21.4, Java 21) tu dong hoa quy trinh trong lai
-va giam sat mot vung cay trong (mac dinh nham vao Pitcher Crop / Pitcher Plant).
+Addon cho Meteor Client (Fabric, Minecraft 1.21.4, Java 21) gom cac tinh nang tu dong hoat dong:
+Auto Boss, Auto Fish, Auto Crop, va cac helper phu tro cho server Van Gioi.
 
 ## Thanh phan
 

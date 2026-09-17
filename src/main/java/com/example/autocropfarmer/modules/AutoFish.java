@@ -206,6 +206,8 @@ public class AutoFish extends Module {
     // ================== State ==================
 
     private boolean running = false;
+    private boolean manualHotbarOverride = false;
+    private int lastObservedSelectedSlot = -1;
     private State state = State.OFF;
     private String status = "Da dung";
 
@@ -235,6 +237,8 @@ public class AutoFish extends Module {
 
     @Override
     public void onActivate() {
+        manualHotbarOverride = false;
+        lastObservedSelectedSlot = -1;
         start();
     }
 
@@ -305,6 +309,19 @@ public class AutoFish extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
+        if (mc.player != null) {
+            int currentSelectedSlot = mc.player.getInventory().selectedSlot;
+            int requiredRodSlot = rodSlot.get() - 1;
+            int requiredBaitSlot = baitSlot.get() - 1;
+
+            if (currentSelectedSlot == requiredRodSlot || currentSelectedSlot == requiredBaitSlot) {
+                manualHotbarOverride = false;
+            } else if (lastObservedSelectedSlot >= 0 && currentSelectedSlot != lastObservedSelectedSlot) {
+                manualHotbarOverride = true;
+            }
+            lastObservedSelectedSlot = currentSelectedSlot;
+        }
+
         if (!running) return;
         if (mc.player == null || mc.interactionManager == null) {
             fail("Khong o trong the gioi");
@@ -414,7 +431,9 @@ public class AutoFish extends Module {
     private void stepAttachingBait() {
         if (!checkReady(false)) return;
 
-        mc.player.getInventory().setSelectedSlot(rodSlot.get() - 1);
+        if (!manualHotbarOverride) {
+            mc.player.getInventory().setSelectedSlot(rodSlot.get() - 1);
+        }
         state = State.SELECTING_ROD;
         waitTicks = 3;
         status = "Dang chon can - Hotbar " + rodSlot.get();
@@ -422,7 +441,9 @@ public class AutoFish extends Module {
 
     private void stepSelectingRod() {
         ClientPlayerEntity player = mc.player;
-        player.getInventory().setSelectedSlot(rodSlot.get() - 1);
+        if (!manualHotbarOverride) {
+            player.getInventory().setSelectedSlot(rodSlot.get() - 1);
+        }
 
         if (!player.getMainHandStack().isOf(Items.FISHING_ROD)) {
             fail("Hotbar " + rodSlot.get() + " khong phai can cau");

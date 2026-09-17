@@ -39,11 +39,11 @@ import org.slf4j.Logger;
  */
 public class AutoCropFarmerAddon extends MeteorAddon {
     public static final Logger LOG = LogUtils.getLogger();
-    public static final Category CATEGORY = new Category("Auto Crop Farmer");
+    public static final Category CATEGORY = new Category("Van Gioi Addon");
 
     @Override
     public void onInitialize() {
-        LOG.info("Initializing Auto Crop Farmer addon");
+        LOG.info("Initializing Van Gioi Addon");
         Hud.get().register(ExperienceHud.INFO);
 
         // Modules
@@ -80,12 +80,12 @@ public class AutoCropFarmerAddon extends MeteorAddon {
 
     @Override
     public String getPackage() {
-        return "com.example.autocropfarmer";
+        return "com.example.vangioi";
     }
 
     @Override
     public GithubRepo getRepo() {
         // Thay bang repo GitHub thuc te cua ban de Meteor co the check update.
-        return new GithubRepo("your-username", "autocropfarmer-addon");
+        return new GithubRepo("your-username", "van-gioi-addon");
     }
 }

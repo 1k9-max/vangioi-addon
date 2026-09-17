@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "autocropfarmer-addon",
+  "id": "van-gioi-addon",
   "version": "${version}",
-  "name": "Auto Crop Farmer",
-  "description": "Meteor Client addon: tu dong trong lai va giam sat cay trong (Pitcher Crop) theo vung chon.",
+  "name": "Van Gioi Addon",
+  "description": "Meteor Client addon: tu dong trong lai, boss, cau ca va cac tinh nang ho tro Van Gioi.",
   "authors": [
     "oibanoi874"
   ],

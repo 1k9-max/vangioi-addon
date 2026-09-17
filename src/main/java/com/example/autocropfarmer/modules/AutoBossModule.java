@@ -12,6 +12,9 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
+import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
@@ -103,6 +106,11 @@ public class AutoBossModule extends Module {
     private static final int STEP_PICK_BOSS = 3;
     private static final int STEP_PICK_ZONE = 4;
     private static final int STEP_DONE = 5;
+
+    // ID item MMOItems cua "Truyen Tong Lenh" (doc tu the NBT MMOITEMS_ITEM_ID). Dung
+    // de xac minh dung item dang o toolSlot truoc khi bam, tranh bam mu neu slot bi
+    // lech/mat item (VD do inventory thay doi, item bi mat, xep sai o...).
+    private static final String TOOL_ITEM_ID = "TRUYENTONGLENH";
     private static final String[][] BOSS_NAMES = {
         {"hu hon thu ho", "quy di thu", "bang nguyen chi thu", "hong lien ma co", "bach nha ma lang", "linh ve diem la", "hoa hau phe ho", "chu tuoc thuong co", "hoa nguc ma long"},
         {"thu son chi linh", "tru vuong", "tieu loi am phat", "ma anh ki vuong", "luc diem ta nhan", "cuc han thu", "chien da quy", "toa vuong ki anh", "hanashiguro"},
@@ -305,12 +313,20 @@ public class AutoBossModule extends Module {
      * "Ban can cho 30s de dung lai Truyen Tong Lenh nay!" - doc thang so giay tu day
      * roi cho DUNG boi nhieu, thay vi retry mo GUI theo chu ky co dinh doan mo (co the
      * qua ngan so voi cooldown that, gay bam lai vo ich va nhan them cooldown moi).
+     *
+     * LUU Y: KHONG doi chieu theo ten item ("Tong Lenh") vi item nay dung font chu HOA
+     * NHO UNICODE DAC BIET cho ten hien thi (VD "ᴛốɴɢ ʟệɴʜ" - cac ky tu ᴛ/ɴ/ɢ/ʟ/ʜ la
+     * code point rieng, KHAC hoan toan voi chu Viet thuong "T/n/g/l/h" du nhin giong het
+     * nhau trong game do font). Neu dong chat cooldown cung chen ten item theo kieu
+     * stylized nay, doi chieu theo "Tong Lenh" (chu thuong) se KHONG BAO GIO khop. Thay
+     * vao do dung 2 cum tu on dinh, gan nhu chac chan la chu thuong binh thuong trong
+     * cau thong bao cua he thong: "cho" (Ns) va "dung lai".
      */
     @EventHandler
     private void onReceiveMessage(ReceiveMessageEvent event) {
         if (state == null) return;
         String text = event.getMessage().getString();
-        if (!text.contains("Tống Lệnh")) return;
+        if (!text.contains("chờ") || !text.contains("dùng lại")) return;
 
         int idx = text.indexOf("chờ");
         if (idx < 0) return;
@@ -387,6 +403,11 @@ public class AutoBossModule extends Module {
 
         switch (travelStep) {
             case STEP_SELECT_TOOL -> {
+                if (!isToolItemPresent()) {
+                    error("Khong tim thay item Truyen Tong Lenh o tool-slot (" + toolSlot.get() + "). Kiem tra lai hotbar. Dang tat module.");
+                    toggle();
+                    return;
+                }
                 selectHotbarSlot(toolSlot.get());
                 travelStep = STEP_OPEN_GUI;
                 stepWaitTicks = 0;
@@ -540,6 +561,21 @@ public class AutoBossModule extends Module {
         if (mc.interactionManager == null || mc.player == null) return false;
         mc.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, mc.player);
         return true;
+    }
+
+    /**
+     * Doc component "minecraft:custom_data" cua item o toolSlot va so sanh voi
+     * MMOITEMS_ITEM_ID = TOOL_ITEM_ID ("TRUYENTONGLENH") de xac minh dung item Truyen
+     * Tong Lenh dang o do TRUOC KHI thu bam, thay vi bam mu roi moi biet sai qua that bai.
+     */
+    private boolean isToolItemPresent() {
+        if (mc.player == null) return false;
+        ItemStack stack = mc.player.getInventory().getStack(toolSlot.get() - 1);
+        if (stack.isEmpty()) return false;
+        NbtComponent customData = stack.get(DataComponentTypes.CUSTOM_DATA);
+        if (customData == null) return false;
+        String itemId = customData.copyNbt().getString("MMOITEMS_ITEM_ID");
+        return TOOL_ITEM_ID.equalsIgnoreCase(itemId);
     }
 
     /**

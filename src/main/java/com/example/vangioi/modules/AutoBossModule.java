@@ -458,11 +458,13 @@ public class AutoBossModule extends Module {
     }
 
     private void beginTraveling() {
+        if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
         state = State.TRAVELING;
         phaseTicks = 0;
         travelStep = STEP_SELECT_TOOL;
         stepWaitTicks = 0;
         guiOpenWaitTicks = 0;
+        guiOpenedLogged = false;
         travelExtraTicks = 0;
         BossTarget target = targets.get(targetIndex);
         log("-> TRAVELING (target %d/%d: do-kho=%s boss-index=%d khu=%s)"
@@ -511,24 +513,17 @@ public class AutoBossModule extends Module {
         boolean timeUp = phaseTicks >= travelSeconds.get() * 20;
 
         if (timeUp) {
-            boolean canExtend = travelStep < STEP_DONE
-                && extendTravelIfNotReady.get()
-                && travelExtraTicks < travelExtendMaxTicks.get();
-            if (!canExtend) {
-                if (travelStep < STEP_DONE) {
-                    logError("Het travel-seconds nhung chua chon xong (travelStep=" + travelStep
-                        + "/" + STEP_DONE + "). EP QUA pha danh (khong the/khong duoc gia han them).");
-                } else if (debugIncludeTickSpam.get()) {
-                    log("Het travel-seconds, da chon xong (STEP_DONE) -> chuyen sang FIGHTING.");
-                }
-                beginFighting();
+            if (travelStep < STEP_DONE) {
+                logError("Het travel-seconds nhung chua chon xong (travelStep=" + travelStep
+                    + "/" + STEP_DONE + "). DONG GUI VA MO LAI.");
+                restartGuiSelection();
                 return;
             }
-            if (travelExtraTicks == 0) {
-                log("Het travel-seconds nhung chua chon xong (travelStep=" + travelStep
-                    + "), bat dau GIA HAN (toi da " + travelExtendMaxTicks.get() + " tick).");
+            if (debugIncludeTickSpam.get()) {
+                log("Het travel-seconds, da chon xong (STEP_DONE) -> chuyen sang FIGHTING.");
             }
-            travelExtraTicks++;
+            beginFighting();
+            return;
         }
 
         switch (travelStep) {
@@ -549,7 +544,7 @@ public class AutoBossModule extends Module {
                     if (debugIncludeTickSpam.get()) {
                         log("STEP_OPEN_GUI: dang cho commandCooldownTicks=" + commandCooldownTicks + " truoc khi bam chuot phai.");
                     }
-                    return; // server dang cam dung lenh nay, cho het cooldown that su
+                    return;
                 }
                 fireOpenGuiInteract();
                 travelStep = STEP_PICK_DIFFICULTY;
@@ -562,6 +557,17 @@ public class AutoBossModule extends Module {
                 // STEP_DONE: chi con cho het travel-seconds (thoi gian teleport/di chuyen).
             }
         }
+    }
+
+    private void restartGuiSelection() {
+        if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
+        phaseTicks = 0;
+        travelStep = STEP_SELECT_TOOL;
+        stepWaitTicks = 0;
+        guiOpenWaitTicks = 0;
+        guiOpenedLogged = false;
+        travelExtraTicks = 0;
+        log("RETRY_GUI: da reset ve STEP_SELECT_TOOL, cho mo lai GUI.");
     }
 
     private void tickPickDifficulty() {

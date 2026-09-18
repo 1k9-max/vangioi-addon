@@ -13,7 +13,6 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
@@ -172,7 +171,7 @@ public class AutoPhobanModule extends Module {
         String bestName = "";
         for (int i = 0; i < handler.slots.size(); i++) {
             ItemStack stack = handler.getSlot(i).getStack();
-            if (stack.isEmpty() || stack.getItem() != Items.COMPASS) continue;
+            if (stack.isEmpty()) continue;
             String name = simplify(stack.getName().getString());
             if (!name.contains(target.get().searchText)) continue;
             boolean joinable = false;
@@ -191,6 +190,10 @@ public class AutoPhobanModule extends Module {
                         busy |= current >= max;
                     }
                 }
+            } else {
+                // Server GUI dung painting cho muc pho ban va khong phai luc nao
+                // cung gui lore trang thai ve client, nen item co ten dung duoc xem la joinable.
+                joinable = true;
             }
             if (!joinable || busy || bestSlot >= 0 && name.compareTo(bestName) <= 0) continue;
             bestSlot = i;
@@ -217,7 +220,17 @@ public class AutoPhobanModule extends Module {
     }
 
     private static String simplify(String value) {
-        return Normalizer.normalize(value.toLowerCase(), Normalizer.Form.NFD)
+        if (value == null) return "";
+        String normalized = value.toLowerCase()
+            .replace("ᴀ", "a").replace("ʙ", "b").replace("ᴄ", "c")
+            .replace("ᴅ", "d").replace("ᴇ", "e").replace("ꜰ", "f")
+            .replace("ɢ", "g").replace("ʜ", "h").replace("ɪ", "i")
+            .replace("ᴊ", "j").replace("ᴋ", "k").replace("ʟ", "l")
+            .replace("ᴍ", "m").replace("ɴ", "n").replace("ᴏ", "o")
+            .replace("ᴘ", "p").replace("ʀ", "r").replace("ᴛ", "t")
+            .replace("ᴜ", "u").replace("ᴠ", "v").replace("ᴡ", "w")
+            .replace("ʏ", "y").replace("ᴢ", "z").replace("đ", "d");
+        return Normalizer.normalize(normalized, Normalizer.Form.NFD)
             .replaceAll("\\p{M}", "").replace("đ", "d").replaceAll("\\s+", " ").trim();
     }
 

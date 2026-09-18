@@ -20,11 +20,11 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 public class GuiDumperModule extends Module {
-    private static final Pattern INVALID_FILE_CHARS = Pattern.compile("[^A-Za-z0-9_.-]");
+    private static final Pattern INVALID_FILE_CHARS = Pattern.compile("[^\\p{L}\\p{N}_.-]");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     public GuiDumperModule() {
-        super(AutoCropFarmerAddon.CATEGORY, "gui-dumper", "Dump thong tin GUI hien tai ra file JSON trong ./gui_dumps/ipsv/[tengui]/.");
+        super(AutoCropFarmerAddon.CATEGORY, "gui-dumper", "Dump thong tin GUI hien tai ra ./gui_dumps/[ip-server]/[ten-gui]/.");
     }
 
     public boolean canShowButton(ScreenHandler handler) {
@@ -40,7 +40,7 @@ public class GuiDumperModule extends Module {
         if (guiName.isBlank()) guiName = sanitizeName(screen.getClass().getSimpleName());
         if (guiName.isBlank()) guiName = "gui";
 
-        File dumpRoot = new File(mc.runDirectory, "gui_dumps/ipsv");
+        File dumpRoot = new File(mc.runDirectory, "gui_dumps/" + sanitizeName(getServerAddress()));
         File folder = new File(dumpRoot, guiName);
         if (!folder.exists() && !folder.mkdirs()) {
             error("Khong tao duoc thu muc dump: " + folder.getAbsolutePath());
@@ -105,5 +105,14 @@ public class GuiDumperModule extends Module {
         clean = clean.replace("__", "_").replace("..", ".");
         clean = clean.substring(0, Math.min(clean.length(), 80));
         return clean.isBlank() ? "gui" : clean.toLowerCase(Locale.ROOT);
+    }
+
+    private String getServerAddress() {
+        if (mc.getCurrentServerEntry() != null) {
+            String address = mc.getCurrentServerEntry().address;
+            int portSeparator = address.lastIndexOf(':');
+            return portSeparator > 0 ? address.substring(0, portSeparator) : address;
+        }
+        return "singleplayer";
     }
 }

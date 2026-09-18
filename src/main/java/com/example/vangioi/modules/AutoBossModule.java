@@ -18,8 +18,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -240,6 +238,7 @@ public class AutoBossModule extends Module {
     private int travelStep;
     private int stepWaitTicks;
     private int guiOpenWaitTicks;
+    private boolean guiOpenedLogged;
     private int travelExtraTicks;
     private int clickTicks;
     private int comboStepIndex;
@@ -307,6 +306,7 @@ public class AutoBossModule extends Module {
         travelStep = 0;
         stepWaitTicks = 0;
         guiOpenWaitTicks = 0;
+        guiOpenedLogged = false;
         travelExtraTicks = 0;
         clickTicks = 0;
         comboStepIndex = 0;
@@ -552,7 +552,6 @@ public class AutoBossModule extends Module {
                     return; // server dang cam dung lenh nay, cho het cooldown that su
                 }
                 fireOpenGuiInteract();
-                log("STEP_OPEN_GUI: da bam chuot phai mo GUI, chuyen sang STEP_PICK_DIFFICULTY.");
                 travelStep = STEP_PICK_DIFFICULTY;
                 stepWaitTicks = 0;
                 guiOpenWaitTicks = 0;
@@ -580,6 +579,11 @@ public class AutoBossModule extends Module {
                 stepWaitTicks = 0;
             }
             return;
+        }
+
+        if (!guiOpenedLogged) {
+            guiOpenedLogged = true;
+            log("STEP_OPEN_GUI: GUI da hien thi sau khi bam chuot phai, chuyen sang STEP_PICK_DIFFICULTY.");
         }
 
         if (++stepWaitTicks < guiOpenDelayTicks.get()) return;
@@ -699,17 +703,8 @@ public class AutoBossModule extends Module {
     }
 
     private void fireOpenGuiInteract() {
-        if (mc.interactionManager == null || mc.player == null) {
-            logError("fireOpenGuiInteract(): interactionManager hoac player null, bo qua.");
-            return;
-        }
-        ActionResult result = mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
-        if (result.isAccepted()) {
-            mc.player.swingHand(Hand.MAIN_HAND);
-            if (debugIncludeTickSpam.get()) log("fireOpenGuiInteract(): interactItem() ACCEPTED, da swing tay.");
-        } else if (debugIncludeTickSpam.get()) {
-            log("fireOpenGuiInteract(): interactItem() tra ve " + result + " (KHONG accepted).");
-        }
+        if (mc.interactionManager == null || mc.player == null) return;
+        Utils.rightClick();
     }
 
     private boolean clickSlot(HandledScreen<?> screen, int slot) {

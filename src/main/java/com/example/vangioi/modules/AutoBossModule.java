@@ -243,6 +243,7 @@ public class AutoBossModule extends Module {
     private int clickTicks;
     private int comboStepIndex;
     private int comboCyclesDone;
+    private boolean toolSelectedClientOnly;
     private int targetIndex;
     private int commandCooldownTicks;
     private int lastObservedSelectedSlot = -1;
@@ -311,6 +312,7 @@ public class AutoBossModule extends Module {
         clickTicks = 0;
         comboStepIndex = 0;
         comboCyclesDone = 0;
+        toolSelectedClientOnly = false;
         commandCooldownTicks = 0;
         if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
         closeDebugLog();
@@ -461,11 +463,12 @@ public class AutoBossModule extends Module {
         if (mc.currentScreen instanceof HandledScreen<?>) mc.setScreen(null);
         state = State.TRAVELING;
         phaseTicks = 0;
-        travelStep = STEP_SELECT_TOOL;
+        travelStep = toolSelectedClientOnly ? STEP_OPEN_GUI : STEP_SELECT_TOOL;
         stepWaitTicks = 0;
         guiOpenWaitTicks = 0;
         guiOpenedLogged = false;
         travelExtraTicks = 0;
+        toolSelectedClientOnly = false;
         BossTarget target = targets.get(targetIndex);
         log("-> TRAVELING (target %d/%d: do-kho=%s boss-index=%d khu=%s)"
             .formatted(targetIndex + 1, targets.size(), target.difficulty(), target.bossIndex(), ZONE_NAMES[target.zoneIndex()]));
@@ -473,6 +476,8 @@ public class AutoBossModule extends Module {
 
     private void beginWaitingAfterFight() {
         releaseClick();
+        selectHotbarSlotClientOnly(toolSlot.get());
+        toolSelectedClientOnly = true;
         state = State.WAITING_AFTER_FIGHT;
         phaseTicks = 0;
         log("-> WAITING_AFTER_FIGHT (cho %d tick)".formatted(postFightDelayTicks.get()));
@@ -771,6 +776,18 @@ public class AutoBossModule extends Module {
             if (debugIncludeTickSpam.get()) log("selectHotbarSlot(" + slot + "): da set + gui UpdateSelectedSlotC2SPacket.");
         } else {
             logError("selectHotbarSlot(" + slot + "): networkHandler null, KHONG gui duoc packet len server!");
+        }
+    }
+
+    private void selectHotbarSlotClientOnly(int slot) {
+        if (mc.player == null) return;
+        int index = slot - 1;
+        if (index < 0 || index > 8) return;
+        if (mc.player.getInventory().selectedSlot != index) {
+            mc.player.getInventory().setSelectedSlot(index);
+            if (debugIncludeTickSpam.get()) {
+                log("selectHotbarSlotClientOnly(" + slot + "): da doi slot sau khi danh, KHONG gui UpdateSelectedSlotC2SPacket.");
+            }
         }
     }
 

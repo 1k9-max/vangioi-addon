@@ -14,8 +14,11 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
 
 import java.text.Normalizer;
 import java.util.regex.Matcher;
@@ -36,8 +39,43 @@ public class AutoPhobanModule extends Module {
         .min(1)
         .sliderMax(40)
         .build());
+    private final Setting<Integer> toolSlot = sgGeneral.add(new IntSetting.Builder()
+        .name("tool-slot")
+        .description("Slot hotbar chua item mo GUI pho ban, tu 1 den 9.")
+        .defaultValue(2)
+        .range(1, 9)
+        .sliderMin(1)
+        .sliderMax(9)
+        .build());
+    private final Setting<Integer> rightClickDelay = sgGeneral.add(new IntSetting.Builder()
+        .name("right-click-delay-ticks")
+        .description("So tick cho sau khi chon slot truoc khi gui chuot phai mo GUI.")
+        .defaultValue(3)
+        .range(1, 20)
+        .sliderMin(1)
+        .sliderMax(10)
+        .build());
+    private final Setting<Integer> openRetryDelay = sgGeneral.add(new IntSetting.Builder()
+        .name("open-retry-delay-ticks")
+        .description("So tick cho truoc khi thu mo lai neu server chua mo GUI.")
+        .defaultValue(40)
+        .range(10, 200)
+        .sliderMin(20)
+        .sliderMax(100)
+        .build());
+    private final Setting<Integer> commandOpenDelay = sgGeneral.add(new IntSetting.Builder()
+        .name("command-open-delay-ticks")
+        .description("So tick giua cac lan goi lenh /phoban khi slot mo GUI khong co item.")
+        .defaultValue(60)
+        .range(20, 200)
+        .sliderMin(20)
+        .sliderMax(100)
+        .build());
     private int timer;
+    private int openTimer;
+    private int commandTimer;
     private boolean wasF4Down;
+    private boolean rightClickSent;
 
     public AutoPhobanModule() {
         super(AutoCropFarmerAddon.CATEGORY, "auto-phoban", "Tim va vao pho ban tren trang GUI hien tai, khong tu dong doi trang.");
@@ -46,14 +84,23 @@ public class AutoPhobanModule extends Module {
     @Override
     public void onActivate() {
         timer = 0;
+        openTimer = 0;
+        commandTimer = 0;
         wasF4Down = false;
+        rightClickSent = false;
     }
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
         if (mc.player == null) return;
         handleF4();
-        if (!(mc.currentScreen instanceof HandledScreen<?> screen)) return;
+        if (!(mc.currentScreen instanceof HandledScreen<?> screen)) {
+            if (mc.currentScreen != null) return;
+            handleGuiOpening();
+            return;
+        }
+        rightClickSent = false;
+        openTimer = 0;
         if (++timer < scanDelay.get()) return;
         timer = 0;
         String title = simplify(screen.getTitle().getString());
@@ -62,6 +109,46 @@ public class AutoPhobanModule extends Module {
             return;
         }
         if (title.contains("pho ban")) scanCurrentPage(screen);
+    }
+
+    private void handleGuiOpening() {
+        ItemStack tool = mc.player.getInventory().getStack(toolSlot.get() - 1);
+        if (tool.isEmpty()) {
+            rightClickSent = false;
+            openTimer = 0;
+            if (++commandTimer >= commandOpenDelay.get()) {
+                if (mc.player.networkHandler != null) mc.player.networkHandler.sendChatCommand("phoban");
+                commandTimer = 0;
+            }
+            return;
+        }
+        commandTimer = 0;
+
+        int selectedSlot = toolSlot.get() - 1;
+        if (mc.player.getInventory().selectedSlot != selectedSlot) {
+            mc.player.getInventory().setSelectedSlot(selectedSlot);
+            if (mc.player.networkHandler != null) {
+                mc.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(selectedSlot));
+            }
+            rightClickSent = false;
+            openTimer = 0;
+            return;
+        }
+
+        if (rightClickSent) {
+            if (++openTimer < openRetryDelay.get()) return;
+            rightClickSent = false;
+            openTimer = 0;
+            return;
+        }
+
+        if (++openTimer < rightClickDelay.get()) return;
+        if (mc.interactionManager == null) return;
+
+        ActionResult result = mc.interactionManager.interactItem(mc.player, Hand.MAIN_HAND);
+        if (result.isAccepted()) mc.player.swingHand(Hand.MAIN_HAND);
+        rightClickSent = true;
+        openTimer = 0;
     }
 
     private void handleF4() {

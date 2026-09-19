@@ -28,19 +28,19 @@ public class AutoDotPhaModule extends Module {
     private static final Map<Character, Character> STYLE_MAP = buildStyleMap();
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final Setting<Integer> itemSlot = sgGeneral.add(new IntSetting.Builder()
-        .name("item-slot").description("Hotbar slot dung item do kiep, tu 1 den 9.")
+        .name("item-slot").description("Slot hotbar dùng vật phẩm độ kiếp, từ 1 đến 9.")
         .defaultValue(1).range(1, 9).sliderMin(1).sliderMax(9).build());
     private final Setting<Integer> itemDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("item-delay-ticks").description("So tick cho truoc khi dung item do kiep.")
+        .name("item-delay-ticks").description("Số tick chờ trước khi dùng vật phẩm độ kiếp.")
         .defaultValue(12).range(1, 100).sliderMin(1).sliderMax(40).build());
     private final Setting<Integer> commandDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("command-delay-ticks").description("So tick giua cac lenh dotpha/dokiep.")
+        .name("command-delay-ticks").description("Số tick chờ giữa các lệnh /dotpha và /dokiep.")
         .defaultValue(12).range(1, 100).sliderMin(1).sliderMax(40).build());
     private final Setting<CustomDropListData> selectedItem = sgGeneral.add(new GenericSetting.Builder<CustomDropListData>()
-        .name("item").description("Mo Edit va bat dung 1 item custom lam item do kiep.")
+        .name("item").description("Mở Edit và bật đúng 1 vật phẩm custom làm vật phẩm độ kiếp.")
         .defaultValue(new CustomDropListData()).build());
     private final Setting<Integer> refillAmount = sgGeneral.add(new IntSetting.Builder()
-        .name("refill-amount").description("Neu item trong slot nho hon gia tri nay thi nap them, tu 1 den 63.")
+        .name("refill-amount").description("Nếu số lượng trong slot nhỏ hơn giá trị này thì nạp thêm, từ 1 đến 63.")
         .defaultValue(32).range(1, 63).sliderMin(1).sliderMax(63).build());
 
     private final ArrayDeque<Action> actions = new ArrayDeque<>();
@@ -50,7 +50,7 @@ public class AutoDotPhaModule extends Module {
     private int previousSlot = -1;
 
     public AutoDotPhaModule() {
-        super(AutoCropFarmerAddon.CATEGORY, "auto-dot-pha", "Tu dong dot pha va do kiep theo chat server.");
+        super(AutoCropFarmerAddon.CATEGORY, "auto-dotpha", "Tự động đột phá và độ kiếp theo tin nhắn máy chủ.");
     }
 
     @Override
@@ -58,7 +58,7 @@ public class AutoDotPhaModule extends Module {
         actions.clear();
         cooldown = 0;
         if (!loadSelectedItem()) {
-            error("Hay bat dung 1 item trong setting item cua Auto Dot Pha.");
+            error("Hãy bật đúng 1 vật phẩm trong setting item của Auto Dot Pha.");
             toggle();
             return;
         }
@@ -102,7 +102,7 @@ public class AutoDotPhaModule extends Module {
 
         if (contains(message, "dot pha that bai") || contains(message, "dot pha thanh cong len")) {
             if (!hasAnyMatchingItem()) {
-                error("Da het item do kiep, Auto Dot Pha tu tat.");
+                error("Đã hết vật phẩm độ kiếp, Auto Dot Pha tự tắt.");
                 toggle();
                 return;
             }
@@ -116,7 +116,7 @@ public class AutoDotPhaModule extends Module {
             || contains(message, "dot pha canh gioi")
             || contains(message, "song sot qua do loi kiep")) {
             if (!hasAnyMatchingItem()) {
-                error("Da het item do kiep, Auto Dot Pha tu tat.");
+                error("Đã hết vật phẩm độ kiếp, Auto Dot Pha tự tắt.");
                 toggle();
                 return;
             }
@@ -129,7 +129,7 @@ public class AutoDotPhaModule extends Module {
         for (CustomDropListData.Entry entry : selectedItem.get().entries) {
             if (!entry.enabled) continue;
             if (chosen != null) {
-                error("Setting item chi duoc bat 1 item custom.");
+                error("Setting item chỉ được bật 1 vật phẩm custom.");
                 return false;
             }
             chosen = entry;
@@ -147,7 +147,7 @@ public class AutoDotPhaModule extends Module {
         if (!target.isEmpty() && !matches(target)) {
             int emptyIndex = findEmptyInventoryIndex(targetIndex);
             if (emptyIndex < 0) {
-                error("Slot item dang co item khac va inventory khong con o trong de cat item do.");
+                error("Slot item đang có vật phẩm khác và inventory không còn ô trống để cất vật phẩm đó.");
                 toggle();
                 return false;
             }
@@ -159,7 +159,7 @@ public class AutoDotPhaModule extends Module {
             refillToAmount(targetIndex, target.isEmpty() ? 0 : target.getCount());
         }
         if (mc.player.getInventory().getStack(targetIndex).isEmpty()) {
-            error("Khong con item do kiep trong inventory, Auto Dot Pha tu tat.");
+            error("Không còn vật phẩm độ kiếp trong inventory, Auto Dot Pha tự tắt.");
             toggle();
             return false;
         }

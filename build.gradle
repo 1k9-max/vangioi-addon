@@ -70,17 +70,3 @@ tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     it.options.release = 21
 }
-
-def vietnameseFontPackDir = file("src/main/resourcepack/van-gioi-vietnamese-font")
-
-tasks.register("buildVietnameseFontPack", Zip) {
-    group = "distribution"
-    description = "Build the selectable Van Gioi Vietnamese font resource pack."
-    archiveFileName = "van-gioi-vietnamese-font.zip"
-    destinationDirectory = layout.buildDirectory.dir("resourcepacks")
-    from(vietnameseFontPackDir)
-}
-
-tasks.named("build") {
-    dependsOn("buildVietnameseFontPack")
-}

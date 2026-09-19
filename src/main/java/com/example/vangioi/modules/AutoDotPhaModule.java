@@ -9,7 +9,6 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
-import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
 import net.minecraft.screen.PlayerScreenHandler;
@@ -263,15 +262,16 @@ public class AutoDotPhaModule extends Module {
     }
 
     private static String normalize(String text) {
-        String lower = text == null ? "" : text.toLowerCase(Locale.forLanguageTag("vi"));
-        StringBuilder result = new StringBuilder(lower.length());
-        for (int i = 0; i < lower.length(); i++) result.append(STYLE_MAP.getOrDefault(lower.charAt(i), lower.charAt(i)));
-        return Normalizer.normalize(result.toString(), Normalizer.Form.NFD).replaceAll("\\p{M}", "").replace("d", "d");
+        String value = text == null ? "" : text;
+        StringBuilder result = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) result.append(STYLE_MAP.getOrDefault(value.charAt(i), value.charAt(i)));
+        String lower = result.toString().toLowerCase(Locale.forLanguageTag("vi"));
+        return Normalizer.normalize(lower, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     }
 
     private static Map<Character, Character> buildStyleMap() {
         Map<Character, Character> map = new HashMap<>();
-        String stylized = "ABCDEFGHIJKLMNOPoRzTUVWhYZ";
+        String stylized = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀѕᴛᴜᴠᴡхʏᴢ";
         String normal = "abcdefghijklmnopqrstuvwxyz";
         for (int i = 0; i < stylized.length(); i++) map.put(stylized.charAt(i), normal.charAt(i));
         return map;

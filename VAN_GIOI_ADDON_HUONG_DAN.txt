@@ -23,7 +23,6 @@ Neu thieu Meteor Client, addon se khong load duoc.
 - MaLiLib: dependency cua Litematica, nen cai cung Litematica.
 - Litematica Printer: tuy chon, dung chung voi Fly To Placement de tu dong dat block.
 - Fabric API: tuy modpack co the da co san.
-- Language Reload: tuy chon, ho tro reload ngon ngu/font.
 
 Neu khong cai Litematica hoac MaLiLib:
 - Van Gioi Addon van khoi dong binh thuong.
@@ -38,10 +37,6 @@ Neu khong cai Litematica hoac MaLiLib:
 4. Chep van-gioi-addon-0.1.0.jar vao thu muc .minecraft/mods.
 5. Neu dung Fly To Placement, chep Litematica va MaLiLib vao mods.
 6. Mo game, vao Meteor -> Modules -> Van Gioi Addon.
-
-Font tieng Viet tuy chon:
-- Chep van-gioi-vietnamese-font.zip vao .minecraft/resourcepacks.
-- Bat pack Van Gioi Vietnamese Font trong Resource Packs.
 
 4. DANH SACH MODULE
 -------------------
@@ -191,5 +186,4 @@ Experience HUD
 - Auto Boss can dung slot vu khi va Truyen Tong Lenh dung.
 - Auto Dotpha chi bat 1 item custom trong setting item.
 - Litematica va MaLiLib la mod tuy chon, chi can cho Fly To Placement.
-- Neu font tieng Viet bi mat dau trong toan client, bat resource pack Van Gioi Vietnamese Font.
 - JAR khong chua san mod Litematica, MaLiLib hoac Litematica Printer.

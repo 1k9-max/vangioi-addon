@@ -262,11 +262,10 @@ public class AutoDotPhaModule extends Module {
     }
 
     private static String normalize(String text) {
-        String value = text == null ? "" : text;
-        StringBuilder result = new StringBuilder(value.length());
-        for (int i = 0; i < value.length(); i++) result.append(STYLE_MAP.getOrDefault(value.charAt(i), value.charAt(i)));
-        String lower = result.toString().toLowerCase(Locale.forLanguageTag("vi"));
-        return Normalizer.normalize(lower, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        String lower = text == null ? "" : text.toLowerCase(Locale.forLanguageTag("vi"));
+        StringBuilder result = new StringBuilder(lower.length());
+        for (int i = 0; i < lower.length(); i++) result.append(STYLE_MAP.getOrDefault(lower.charAt(i), lower.charAt(i)));
+        return Normalizer.normalize(result.toString(), Normalizer.Form.NFD).replaceAll("\\p{M}", "").replace("đ", "d");
     }
 
     private static Map<Character, Character> buildStyleMap() {

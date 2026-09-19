@@ -28,6 +28,12 @@ Yeu cau: JDK 21.
 
 File .jar ket qua nam trong `build/libs/`.
 
+## Font tieng Viet
+
+Addon kem font `vangioi:font/vietnamese` trong resource `assets/vangioi/font/vietnamese.json`.
+Neu client co menu chon font (vi du Language Reload), chon font `vangioi:font/vietnamese`.
+Font nay khong ghi de font mac dinh cua Minecraft.
+
 ## Truoc khi build lan dau
 
 Mo `gradle.properties` va kiem tra dong `meteor_version` khop voi build Meteor Client

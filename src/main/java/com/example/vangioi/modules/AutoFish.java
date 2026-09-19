@@ -620,14 +620,14 @@ public class AutoFish extends Module {
         String lower = line.toLowerCase(Locale.ROOT);
 
         if (running) {
-            if (lower.contains("đã câu được cá") || lower.contains("đã ᴄâᴜ đượᴄ ᴄá")) {
+            if (lower.contains("da cau duoc ca") || lower.contains("da CaU duoC Ca")) {
                 restart("Cau thanh cong");
-            } else if (lower.contains("cần phải gắn mồi") || lower.contains("ᴄầɴ ᴘʜảɪ ɢắɴ ᴍồi")) {
+            } else if (lower.contains("can phai gan moi") || lower.contains("CaN PHaI GaN Moi")) {
                 releaseSneak();
                 state = State.PREPARING;
                 waitTicks = 5;
                 status = "Server yeu cau gan moi lai";
-            } else if (lower.contains("không có loại cá nào phù hợp") || lower.contains("ᴋʜôɴɢ ᴄó ʟᴏàɪ ᴄá ɴàᴏ ᴘʜù ʜợᴘ")) {
+            } else if (lower.contains("khong co loai ca nao phu hop") || lower.contains("KHoNG Co LOaI Ca NaO PHu HoP")) {
                 fail("Moi/biome hien tai khong co ca phu hop");
             }
         }

@@ -48,12 +48,12 @@ public class LinhThaoLocations extends Module {
     );
 
     // Header line that marks the start of a new /linhthao result list
-    private static final Pattern HEADER = Pattern.compile("ᴅᴀɴʜ\\s*ꜱáᴄʜ\\s*ᴠị\\s*ᴛʀí\\s*ʟɪɴʜ\\s*ᴛʜảᴏ");
+    private static final Pattern HEADER = Pattern.compile("DANH\\s*SaCH\\s*Vi\\s*TRi\\s*LINH\\s*THaO");
 
     // Each location line, e.g.:
-    // - ᴛêɴ: ɴɢọᴄ ᴛủʏ ᴄʜɪ | ʙậᴄ: ʟɪɴʜ | ᴛọᴀ độ: x:-1516, ʏ:12, ᴢ:-298 | ᴍᴀᴘ: ʙí ᴄảɴʜ
+    // - TeN: NGoC TuY CHI | BaC: LINH | ToA do: x:-1516, Y:12, Z:-298 | MAP: Bi CaNH
     private static final Pattern LINE = Pattern.compile(
-        "ᴛêɴ:\\s*(.+?)\\s*\\|\\s*ʙậᴄ:\\s*(.+?)\\s*\\|\\s*ᴛọᴀ\\s*độ:\\s*x:(-?\\d+),\\s*ʏ:(-?\\d+),\\s*ᴢ:(-?\\d+)\\s*\\|\\s*ᴍᴀᴘ:\\s*(.+)"
+        "TeN:\\s*(.+?)\\s*\\|\\s*BaC:\\s*(.+?)\\s*\\|\\s*ToA\\s*do:\\s*x:(-?\\d+),\\s*Y:(-?\\d+),\\s*Z:(-?\\d+)\\s*\\|\\s*MAP:\\s*(.+)"
     );
 
     private final List<Entry> entries = new ArrayList<>();

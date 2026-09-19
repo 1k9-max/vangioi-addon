@@ -86,7 +86,7 @@ public class AutoCropFarmer extends Module {
 
     private final Setting<Integer> monitorInterval = sgGeneral.add(new IntSetting.Builder()
         .name("monitor-interval-ticks")
-        .description("So tick giua MOI HANH DONG (thu hoach/trong lai/giá đỡ giáp) khi o trang thai MONITORING. "
+        .description("So tick giua MOI HANH DONG (thu hoach/trong lai/gia do giap) khi o trang thai MONITORING. "
             + "Moi chu ky CHI thuc hien 1 hanh dong duy nhat - tang gia tri nay len neu server phan hoi cham "
             + "hoac gap loi do 2 hanh dong chen vao nhau.")
         .defaultValue(10)
@@ -133,7 +133,7 @@ public class AutoCropFarmer extends Module {
 
     private final Setting<Integer> armorStandVerticalRange = sgGeneral.add(new IntSetting.Builder()
         .name("armor-stand-vertical-range")
-        .description("Pham vi do cao (block) phia tren/duoi vung trong de tim Giá đỡ giáp (Armor Stand) an, khop theo cot X,Z.")
+        .description("Pham vi do cao (block) phia tren/duoi vung trong de tim Gia do giap (Armor Stand) an, khop theo cot X,Z.")
         .defaultValue(6)
         .range(1, 32)
         .sliderMin(1)
@@ -143,12 +143,12 @@ public class AutoCropFarmer extends Module {
 
     private final Setting<String> harvestReadyKeyword = sgGeneral.add(new StringSetting.Builder()
         .name("harvest-ready-keyword")
-        .description("Tu khoa (khong phan biet hoa/thuong) tim trong TEXT hien thi cua Giá đỡ giáp de biet cay "
-            + "DA SAN SANG THU HOACH. Mac dinh la \"thu hoạch\" (khop voi text server hien thi: "
-            + "\"CÓ THỂ THU HOẠCH\" mau xanh la - xac nhan tu screenshot thuc te). Khi Giá đỡ giáp xuat hien voi "
+        .description("Tu khoa (khong phan biet hoa/thuong) tim trong TEXT hien thi cua Gia do giap de biet cay "
+            + "DA SAN SANG THU HOACH. Mac dinh la \"thu hoach\" (khop voi text server hien thi: "
+            + "\"CO THE THU HOACH\" mau xanh la - xac nhan tu screenshot thuc te). Khi Gia do giap xuat hien voi "
             + "text chua tu khoa nay, se chuyen tay khong thu hoach NGAY, khong cho block doi nua (tranh tuoi "
             + "nham luc da san sang). De trong se bo qua, dung lai logic doan qua BlockState nhu cu.")
-        .defaultValue("thu hoạch")
+        .defaultValue("thu hoach")
         .build()
     );
 
@@ -368,7 +368,7 @@ public class AutoCropFarmer extends Module {
     // Vi tri da thu hoach xong (cropPos tro thanh air/khac), dang cho trong lai
     private final Set<BlockPos> pendingReplant = new HashSet<>();
     // Vi tri VUA gui hanh dong trong lai, dang cho xac nhan server da thuc su dat cay xong
-    // (tranh cac hanh dong khac - vi du: Giá đỡ giáp/tuoi - chen vao truoc khi xac nhan).
+    // (tranh cac hanh dong khac - vi du: Gia do giap/tuoi - chen vao truoc khi xac nhan).
     private final Set<BlockPos> replantAwaitingConfirm = new HashSet<>();
     // Vi tri vua thu hoach xong, con lai bao nhieu chu ky MONITORING nua moi duoc phep bat dau trong lai
     // (xem "replant-cooldown-cycles") - tach ro rang thu hoach va trong lai, tranh dinh lien nhau.
@@ -890,7 +890,7 @@ public class AutoCropFarmer extends Module {
         Map<Long, String> hiddenStandInfo = collectHiddenArmorStandInfo();
 
         if (!hiddenStandInfo.isEmpty()) {
-            log("[MONITORING] Tim thay " + hiddenStandInfo.size() + " cot X,Z co Giá đỡ giáp an.");
+            log("[MONITORING] Tim thay " + hiddenStandInfo.size() + " cot X,Z co Gia do giap an.");
         }
 
         String readyKeyword = harvestReadyKeyword.get().trim().toLowerCase();
@@ -918,15 +918,15 @@ public class AutoCropFarmer extends Module {
 
             boolean isMature = isCropMature(currentState);
 
-            // Neu co keyword cau hinh, uu tien doc TEXT tren Giá đỡ giáp de biet cay da san sang
-            // thu hoach hay chua - CHINH XAC HON viec doan qua BlockState (vi Giá đỡ giáp bao hieu
+            // Neu co keyword cau hinh, uu tien doc TEXT tren Gia do giap de biet cay da san sang
+            // thu hoach hay chua - CHINH XAC HON viec doan qua BlockState (vi Gia do giap bao hieu
             // "san sang" TRUOC KHI block kip doi, tranh bi tuoi nham luc dang can thu hoach).
             if (!readyKeyword.isEmpty() && !pendingHarvest.contains(base) && !pendingReplant.contains(base)) {
                 String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
                 if (standText != null && standText.toLowerCase().contains(readyKeyword)) {
                     isMature = true;
                     log("[MONITORING] base=" + base + " cropPos=" + cropPos
-                        + " - Giá đỡ giáp bao TEXT chua tu khoa \"" + readyKeyword + "\" (\"" + standText
+                        + " - Gia do giap bao TEXT chua tu khoa \"" + readyKeyword + "\" (\"" + standText
                         + "\") -> coi la DA SAN SANG THU HOACH, bo qua doan BlockState.");
                 }
             }
@@ -967,9 +967,9 @@ public class AutoCropFarmer extends Module {
 
         // ===== Giai doan 2: CHI THUC HIEN DUY NHAT 1 HANH DONG moi chu ky (moi "monitor-interval-ticks"). =====
         // Tranh truong hop 2 hanh dong (vi du: thu hoach o nay + trong lai o kia) bi ban gan nhu dong thoi
-        // trong cung 1 tick, gay xung dot/loi phia server. Uu tien theo thu tu: Giá đỡ giáp > Trong lai > Thu hoach.
+        // trong cung 1 tick, gay xung dot/loi phia server. Uu tien theo thu tu: Gia do giap > Trong lai > Thu hoach.
 
-        // a) Giá đỡ giáp (Armor Stand) an tren PITCHER_CROP -> Item 1
+        // a) Gia do giap (Armor Stand) an tren PITCHER_CROP -> Item 1
         // Bo qua hoan toan cac vi tri dang trong pendingReplant HOAC pendingHarvest (da duoc xac dinh
         // la can thu hoach - co the qua keyword text hoac qua block-state) - tranh "tuoi nham" luc
         // le ra phai thu hoach, va tranh chen vao giua qua trinh trong lai.
@@ -985,7 +985,7 @@ public class AutoCropFarmer extends Module {
                 && hiddenStandInfo.containsKey(packXZ(cropPos.getX(), cropPos.getZ()))) {
                 log("[MONITORING] base=" + base + " cropPos=" + cropPos
                     + " block=" + Registries.BLOCK.getId(currentBlock)
-                    + " - Giá đỡ giáp khop cot X,Z tren PITCHER_CROP -> di chuyen (neu can) roi swap Item 1.");
+                    + " - Gia do giap khop cot X,Z tren PITCHER_CROP -> di chuyen (neu can) roi swap Item 1.");
 
                 BlockPos finalCropPos = cropPos;
                 BlockPos finalBase = base;
@@ -1138,8 +1138,8 @@ public class AutoCropFarmer extends Module {
      * bao quanh toan bo vung trong (mo rong theo chieu doc theo armorStandVerticalRange).
      */
     /**
-     * Gom du lieu Giá đỡ giáp (Armor Stand) an trong pham vi vung trong: moi cot (x,z) -> noi dung
-     * text hien thi tren no (custom name, vi du "Cần tưới" / "Có thể thu hoạch!"). Giá đỡ giáp
+     * Gom du lieu Gia do giap (Armor Stand) an trong pham vi vung trong: moi cot (x,z) -> noi dung
+     * text hien thi tren no (custom name, vi du "Can tuoi" / "Co the thu hoach!"). Gia do giap
      * nay dong vai tro nhu 1 dong chu trang thai noi tren cay, nen doc truc tiep text nay se
      * chinh xac hon nhieu so voi chi doan qua BlockState.
      */

@@ -125,7 +125,7 @@ public class AutoDropVanilla extends Module {
     private void onTickPost(TickEvent.Post event) {
         if (mc.player == null) return;
 
-        // Khi dang mo mot container (rương/chest...) thi de nhanh GUI (onInventory) xu ly, tranh drop
+        // Khi dang mo mot container (ruong/chest...) thi de nhanh GUI (onInventory) xu ly, tranh drop
         // trung 2 lan hoac drop nham slot cua container dang hien thi chong len inventory.
         if (mc.currentScreen instanceof HandledScreen<?> && !(mc.player.currentScreenHandler instanceof PlayerScreenHandler)) {
             return;

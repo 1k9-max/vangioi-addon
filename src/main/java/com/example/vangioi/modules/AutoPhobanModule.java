@@ -222,16 +222,16 @@ public class AutoPhobanModule extends Module {
     private static String simplify(String value) {
         if (value == null) return "";
         String normalized = value.toLowerCase()
-            .replace("ᴀ", "a").replace("ʙ", "b").replace("ᴄ", "c")
-            .replace("ᴅ", "d").replace("ᴇ", "e").replace("ꜰ", "f")
-            .replace("ɢ", "g").replace("ʜ", "h").replace("ɪ", "i")
-            .replace("ᴊ", "j").replace("ᴋ", "k").replace("ʟ", "l")
-            .replace("ᴍ", "m").replace("ɴ", "n").replace("ᴏ", "o")
-            .replace("ᴘ", "p").replace("ʀ", "r").replace("ᴛ", "t")
-            .replace("ᴜ", "u").replace("ᴠ", "v").replace("ᴡ", "w")
-            .replace("ʏ", "y").replace("ᴢ", "z").replace("đ", "d");
+            .replace("A", "a").replace("B", "b").replace("C", "c")
+            .replace("D", "d").replace("E", "e").replace("F", "f")
+            .replace("G", "g").replace("H", "h").replace("I", "i")
+            .replace("J", "j").replace("K", "k").replace("L", "l")
+            .replace("M", "m").replace("N", "n").replace("O", "o")
+            .replace("P", "p").replace("R", "r").replace("T", "t")
+            .replace("U", "u").replace("V", "v").replace("W", "w")
+            .replace("Y", "y").replace("Z", "z").replace("d", "d");
         return Normalizer.normalize(normalized, Normalizer.Form.NFD)
-            .replaceAll("\\p{M}", "").replace("đ", "d").replaceAll("\\s+", " ").trim();
+            .replaceAll("\\p{M}", "").replace("d", "d").replaceAll("\\s+", " ").trim();
     }
 
     public enum PhoBanType {

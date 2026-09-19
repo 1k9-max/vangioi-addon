@@ -40,9 +40,9 @@ import java.util.Set;
  * AutoCropWaterer
  * ---------------
  * Module MOI, TACH RIENG khoi AutoCropFarmer - CHI lam 1 viec DUY NHAT: tu dong tuoi cay (right-click
- * bang 1 item "tuoi" da chon) khi phat hien cay CAN TUOI, dua tren TEXT hien thi tren Giá đỡ giáp an
+ * bang 1 item "tuoi" da chon) khi phat hien cay CAN TUOI, dua tren TEXT hien thi tren Gia do giap an
  * (armor stand) phia tren cay - dung ky thuat giong het module AutoCropFarmer cu (doc custom name cua
- * Giá đỡ giáp an, tim tu khoa cau hinh, vi du "cần tưới").
+ * Gia do giap an, tim tu khoa cau hinh, vi du "can tuoi").
  *
  * Khac voi AutoCropFarmer (lam CA trong + thu hoach + tuoi), module nay don gian hon, danh cho truong
  * hop chi can rieng phan tuoi tu dong (vi du: dung song song voi mot addon/cach trong khac).
@@ -95,7 +95,7 @@ public class AutoCropWaterer extends Module {
     private final Setting<Integer> waterConfirmDelayCycles = sgGeneral.add(new IntSetting.Builder()
         .name("water-confirm-delay-cycles")
         .description("Sau khi gui hanh dong tuoi (interactBlock), cho bao nhieu CHU KY MONITORING "
-            + "(moi chu ky cach nhau 'monitor-interval-ticks') roi moi kiem tra Giá đỡ giáp bao 'can tuoi' "
+            + "(moi chu ky cach nhau 'monitor-interval-ticks') roi moi kiem tra Gia do giap bao 'can tuoi' "
             + "(vi du chua linh dich) co con xuat hien hay khong, de XAC NHAN tuoi thanh cong that su - "
             + "KHONG dua vao ket qua tra ve tuc thi cua interactBlock() vi tin hieu nay KHONG dang tin cho "
             + "hanh dong tuoi (co the bao THAT BAI ngay ca khi da thanh cong).")
@@ -109,7 +109,7 @@ public class AutoCropWaterer extends Module {
     private final Setting<Integer> wateredCooldownCycles = sgGeneral.add(new IntSetting.Builder()
         .name("watered-cooldown-cycles")
         .description("So chu ky MONITORING can cho SAU KHI tuoi xong 1 vi tri, truoc khi vi tri do co the "
-            + "duoc coi la 'can tuoi' tro lai (tranh tuoi lien tuc do text Giá đỡ giáp chua kip cap nhat).")
+            + "duoc coi la 'can tuoi' tro lai (tranh tuoi lien tuc do text Gia do giap chua kip cap nhat).")
         .defaultValue(5)
         .range(0, 100)
         .sliderMin(0)
@@ -119,7 +119,7 @@ public class AutoCropWaterer extends Module {
 
     private final Setting<Integer> armorStandVerticalRange = sgGeneral.add(new IntSetting.Builder()
         .name("armor-stand-vertical-range")
-        .description("Pham vi do cao (block) phia tren/duoi vung de tim Giá đỡ giáp an, khop theo cot X,Z.")
+        .description("Pham vi do cao (block) phia tren/duoi vung de tim Gia do giap an, khop theo cot X,Z.")
         .defaultValue(6)
         .range(1, 32)
         .sliderMin(1)
@@ -129,9 +129,9 @@ public class AutoCropWaterer extends Module {
 
     private final Setting<String> needWaterKeyword = sgGeneral.add(new StringSetting.Builder()
         .name("need-water-keyword")
-        .description("TUY CHON - de trong (mac dinh) se tuoi ngay khi phat hien Giá đỡ giáp an xuat hien "
+        .description("TUY CHON - de trong (mac dinh) se tuoi ngay khi phat hien Gia do giap an xuat hien "
             + "dung cot X,Z (giong het cach AutoCropFarmer hoat dong, khong quan tam text). Neu dien vao, "
-            + "se dung THEM lam bo loc phu: bat buoc text tren Giá đỡ giáp phai chua tu khoa nay (khong "
+            + "se dung THEM lam bo loc phu: bat buoc text tren Gia do giap phai chua tu khoa nay (khong "
             + "phan biet hoa/thuong) thi moi tuoi. Bat 'debug-logging' de xem text thuc te trong file "
             + "autocropwaterer-debug.log.")
         .defaultValue("")
@@ -281,7 +281,7 @@ public class AutoCropWaterer extends Module {
     private final Set<BlockPos> pendingWater = new HashSet<>();
     private final Map<BlockPos, Integer> waterCooldownRemaining = new HashMap<>();
     private final Map<BlockPos, Integer> waterAttempts = new HashMap<>();
-    // Cac vi tri DA gui hanh dong tuoi (interactBlock) va dang CHO XAC NHAN THAT SU qua Giá đỡ giáp -
+    // Cac vi tri DA gui hanh dong tuoi (interactBlock) va dang CHO XAC NHAN THAT SU qua Gia do giap -
     // KHONG dua vao ket qua tra ve tuc thi cua interactBlock() (khong dang tin cho hanh dong nay).
     private final Set<BlockPos> waterAwaitingConfirm = new HashSet<>();
     private final Map<BlockPos, Integer> waterConfirmTicksRemaining = new HashMap<>();
@@ -291,7 +291,7 @@ public class AutoCropWaterer extends Module {
 
     public AutoCropWaterer() {
         super(AutoCropFarmerAddon.CATEGORY, "auto-crop-waterer",
-            "Tu dong tuoi cay (rieng phan tuoi) trong mot vung chon, dua tren text Giá đỡ giáp an.");
+            "Tu dong tuoi cay (rieng phan tuoi) trong mot vung chon, dua tren text Gia do giap an.");
     }
 
     @Override
@@ -500,16 +500,16 @@ public class AutoCropWaterer extends Module {
         Map<Long, String> hiddenStandInfo = collectHiddenArmorStandInfo();
 
         // LUON log 1 dong tom tat moi chu ky (KHONG con gate boi isEmpty() nhu truoc) - de nguoi dung
-        // co the xac nhan module THUC SU dang chay va biet chinh xac dang tim thay bao nhieu Giá đỡ
-        // giáp an (ke ca 0) thay vi im lang hoan toan khi khong tim thay gi, gay cam giac "khong hoat dong".
+        // co the xac nhan module THUC SU dang chay va biet chinh xac dang tim thay bao nhieu Gia do
+        // giap an (ke ca 0) thay vi im lang hoan toan khi khong tim thay gi, gay cam giac "khong hoat dong".
         log("[MONITORING] Chu ky quet: area=" + area.size() + " vi tri, tim thay " + hiddenStandInfo.size()
-            + " cot X,Z co Giá đỡ giáp an (invisible).");
+            + " cot X,Z co Gia do giap an (invisible).");
 
         String keyword = needWaterKeyword.get().trim().toLowerCase();
 
         // ===== Giai doan 0: XAC NHAN cac vi tri dang cho sau khi da gui hanh dong tuoi =====
         // KHONG dua vao ket qua tra ve tuc thi cua interactBlock() (xem doWaterAction()) - thay vao do,
-        // cho "water-confirm-delay-cycles" roi kiem tra THAT SU xem Giá đỡ giáp bao "can tuoi" o cot nay
+        // cho "water-confirm-delay-cycles" roi kiem tra THAT SU xem Gia do giap bao "can tuoi" o cot nay
         // co CON xuat hien hay khong (dung hiddenStandInfo vua quet o dau ham nay). Neu KHONG con nua ->
         // tuoi da thanh cong that su (du interactBlock co the da bao THAT BAI luc gui). Neu VAN CON ->
         // that su chua thanh cong (hoac chua kip cap nhat), cho quay lai pendingWater de thu lai.
@@ -531,7 +531,7 @@ public class AutoCropWaterer extends Module {
 
                 if (!stillNeedsMatchingKeyword) {
                     log("[MONITORING] base=" + base + " cropPos=" + cropPos
-                        + " - XAC NHAN tuoi THANH CONG (Giá đỡ giáp 'can tuoi' khong con xuat hien nua).");
+                        + " - XAC NHAN tuoi THANH CONG (Gia do giap 'can tuoi' khong con xuat hien nua).");
                     waterAttempts.remove(base);
                     waterCooldownRemaining.put(base, wateredCooldownCycles.get());
 
@@ -541,18 +541,18 @@ public class AutoCropWaterer extends Module {
                     }
                 } else {
                     log("[MONITORING] base=" + base + " cropPos=" + cropPos
-                        + " - CHUA xac nhan duoc (Giá đỡ giáp 'can tuoi' van con) -> cho vao pendingWater de thu lai.");
+                        + " - CHUA xac nhan duoc (Gia do giap 'can tuoi' van con) -> cho vao pendingWater de thu lai.");
                     pendingWater.add(base); // quay lai hang doi, se duoc xu ly o Giai doan 2 ben duoi
                 }
             }
         }
 
         // ===== Giai doan 1: quet & cap nhat pendingWater (chi doc, khong gui packet) =====
-        // Dung DUNG logic da duoc xac nhan hoat dong that trong AutoCropFarmer: CHI CAN co Giá đỡ
-        // giáp an xuat hien dung cot X,Z la coi nhu "can tuoi", KHONG bat buoc phai khop text nao ca
-        // (server co the hien Giá đỡ giáp ma chua kip gan custom name, hoac text khac di doi chut).
+        // Dung DUNG logic da duoc xac nhan hoat dong that trong AutoCropFarmer: CHI CAN co Gia do
+        // giap an xuat hien dung cot X,Z la coi nhu "can tuoi", KHONG bat buoc phai khop text nao ca
+        // (server co the hien Gia do giap ma chua kip gan custom name, hoac text khac di doi chut).
         // Neu "need-water-keyword" duoc dien (khong de trong), dung THEM no nhu 1 bo loc phu (phai
-        // khop CA hai dieu kien) - de trong se chi can Giá đỡ giáp xuat hien la du, giong AutoCropFarmer.
+        // khop CA hai dieu kien) - de trong se chi can Gia do giap xuat hien la du, giong AutoCropFarmer.
         for (BlockPos base : area) {
             BlockPos cropPos = base.up();
 
@@ -561,13 +561,13 @@ public class AutoCropWaterer extends Module {
             if (waterAwaitingConfirm.contains(base)) continue; // dang cho xac nhan, dung dam vao lai
 
             String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
-            if (standText == null) continue; // Khong co Giá đỡ giáp o cot nay -> chua can tuoi
+            if (standText == null) continue; // Khong co Gia do giap o cot nay -> chua can tuoi
 
             if (!keyword.isEmpty() && !standText.toLowerCase().contains(keyword)) continue;
 
             pendingWater.add(base);
             log("[MONITORING] base=" + base + " cropPos=" + cropPos
-                + " - Giá đỡ giáp xuat hien dung cot X,Z (text=\"" + standText + "\") -> them vao pendingWater.");
+                + " - Gia do giap xuat hien dung cot X,Z (text=\"" + standText + "\") -> them vao pendingWater.");
         }
 
         // Dem nguoc cooldown sau khi vua tuoi
@@ -613,7 +613,7 @@ public class AutoCropWaterer extends Module {
      * tuoi nay - no co the bao THAT BAI ngay ca khi server da xu ly thanh cong that su. Vi vay ham nay
      * CHI GUI hanh dong roi chuyen vi tri sang trang thai "cho xac nhan" (waterAwaitingConfirm) - viec
      * xac dinh thanh cong/that bai THAT SU duoc lam o Giai doan 0 cua handleMonitoring(), dua tren viec
-     * Giá đỡ giáp bao "can tuoi" co con xuat hien o cot do hay khong sau 1 khoang cho ("water-confirm-
+     * Gia do giap bao "can tuoi" co con xuat hien o cot do hay khong sau 1 khoang cho ("water-confirm-
      * delay-ticks") - giong nguyen tac AutoCropFarmer dung BlockState de xac nhan trong cay thay vi tin
      * ActionResult.
      */
@@ -629,7 +629,7 @@ public class AutoCropWaterer extends Module {
 
         boolean sentResult = interactBlock(cropPos, Direction.UP);
         log("[MONITORING] base=" + base + " interactBlock(UP) -> DA GUI (ket qua tuc thi=" + sentResult
-            + ", KHONG dung de ket luan thanh/bai - se xac nhan qua Giá đỡ giáp sau "
+            + ", KHONG dung de ket luan thanh/bai - se xac nhan qua Gia do giap sau "
             + waterConfirmDelayCycles.get() + " chu ky) (lan " + attempts + "/" + maxWaterAttempts.get() + ")");
 
         waterAwaitingConfirm.add(base);
@@ -662,9 +662,9 @@ public class AutoCropWaterer extends Module {
             ArmorStandEntity::isInvisible
         );
 
-        // CHAN DOAN: neu khong tim thay Giá đỡ giáp NAO ca (invisible=0), kiem tra THEM xem co Giá đỡ
-        // giáp nao trong searchBox du KHONG invisible hay khong - giup phan biet 2 truong hop: (a) server
-        // hoan toan KHONG dat Giá đỡ giáp nao o day (searchBox/toa do sai, hoac server dung co che khac
+        // CHAN DOAN: neu khong tim thay Gia do giap NAO ca (invisible=0), kiem tra THEM xem co Gia do
+        // giap nao trong searchBox du KHONG invisible hay khong - giup phan biet 2 truong hop: (a) server
+        // hoan toan KHONG dat Gia do giap nao o day (searchBox/toa do sai, hoac server dung co che khac
         // khong phai armor stand de bao "can tuoi"), hay (b) CO armor stand nhung KHONG duoc flag invisible
         // (vi du server dung Marker armor stand/ao giap trong suot khac co che voi PITCHER_CROP).
         if (stands.isEmpty()) {
@@ -672,16 +672,16 @@ public class AutoCropWaterer extends Module {
                 ArmorStandEntity.class, searchBox, stand -> true
             );
             if (!allStandsIgnoreInvisible.isEmpty()) {
-                log("[MONITORING][DEBUG] KHONG tim thay Giá đỡ giáp INVISIBLE nao, nhung CO "
-                    + allStandsIgnoreInvisible.size() + " Giá đỡ giáp KHONG invisible trong searchBox ("
+                log("[MONITORING][DEBUG] KHONG tim thay Gia do giap INVISIBLE nao, nhung CO "
+                    + allStandsIgnoreInvisible.size() + " Gia do giap KHONG invisible trong searchBox ("
                     + "y=" + y + " +-" + vRange + ") -> co the server dung co che khac invisible-flag de an "
-                    + "Giá đỡ giáp cho cay nay (vi du Marker/armor rong), hoac day khong phai tin hieu 'can tuoi' "
+                    + "Gia do giap cho cay nay (vi du Marker/armor rong), hoac day khong phai tin hieu 'can tuoi' "
                     + "cho loai cay nay. Vi du toa do 1 cai: " + describeStand(allStandsIgnoreInvisible.get(0)));
             } else {
-                log("[MONITORING][DEBUG] KHONG tim thay Giá đỡ giáp nao (invisible hay khong) trong searchBox "
+                log("[MONITORING][DEBUG] KHONG tim thay Gia do giap nao (invisible hay khong) trong searchBox "
                     + "(x=" + minX + ".." + maxX + ", y=" + (y - vRange) + ".." + (y + vRange)
                     + ", z=" + minZ + ".." + maxZ + "). Kiem tra lai: pos1/pos2 co dung do cao cay khong, "
-                    + "'armor-stand-vertical-range' co du lon khong, va server co thuc su dung Giá đỡ giáp "
+                    + "'armor-stand-vertical-range' co du lon khong, va server co thuc su dung Gia do giap "
                     + "de bao 'can tuoi' cho loai cay nay hay khong (co the day khong phai co che dung).");
             }
         }

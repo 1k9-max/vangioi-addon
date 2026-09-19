@@ -24,9 +24,9 @@ import java.util.Map;
  *      Neu khong thay xac nhan truoc khi timeout, coi nhu THAT BAI (khong tu suy dien la thanh cong).
  *
  * QUAN TRONG - UNICODE SMALL-CAPS:
- * Nhieu server dung font "chu hoa nho" (vi du "ɴʜậᴘ ѕố ʟượɴɢ") de trang tri chat he thong. Cac ky
- * tu nhu ɴ ʜ ᴘ ѕ ʟ ɢ ... KHONG PHAI la chu Latin thuong/hoa binh thuong ma la cac code point Unicode
- * rieng (khoi Phonetic Extensions + 1 vai ky tu muon tu Cyrillic nhu "ѕ"). toLowerCase() KHONG the
+ * Nhieu server dung font "chu hoa nho" (vi du "NHaP zo LuoNG") de trang tri chat he thong. Cac ky
+ * tu nhu N H P z L G ... KHONG PHAI la chu Latin thuong/hoa binh thuong ma la cac code point Unicode
+ * rieng (khoi Phonetic Extensions + 1 vai ky tu muon tu Cyrillic nhu "z"). toLowerCase() KHONG the
  * chuan hoa duoc chung, nen so sanh chuoi truc tiep se KHONG BAO GIO khop va khien refiller cho mai
  * roi timeout. STYLE_MAP ben duoi dung de "dich nguoc" cac ky tu nay ve chu Latin thuong truoc khi
  * so sanh - cac ky tu co dau tieng Viet (a, o, u, ...) khong bi dong trong bang nay van giu nguyen,
@@ -51,14 +51,14 @@ public class LinhDichRefiller {
     // "Dich nguoc" chu hoa nho Unicode (small caps) ve chu Latin thuong de so sanh chuoi cho dung.
     private static final Map<Character, Character> STYLE_MAP = new HashMap<>();
     static {
-        String stylized = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘʀѕᴛᴜᴠᴡʏᴢ";
+        String stylized = "ABCDEFGHIJKLMNOPRzTUVWYZ";
         String normal   = "abcdefghijklmnoprstuvwyz";
         for (int i = 0; i < stylized.length(); i++) {
             STYLE_MAP.put(stylized.charAt(i), normal.charAt(i));
         }
         // Cac bien the/ky tu ngoai bang chinh hay gap them trong cac font "chu hoa nho" khac nhau
-        STYLE_MAP.put('ꜱ', 's');
-        STYLE_MAP.put('ǫ', 'q');
+        STYLE_MAP.put('S', 's');
+        STYLE_MAP.put('o', 'q');
         STYLE_MAP.put('x', 'x');
     }
 
@@ -237,13 +237,13 @@ public class LinhDichRefiller {
             if (Character.getType(c) == Character.NON_SPACING_MARK) continue;
             sb.append(c);
         }
-        // dong 'd' (khong dau) trong tieng Viet tach NFD ra 'đ' + khong co mark rieng -> xu ly thu cong
+        // dong 'd' (khong dau) trong tieng Viet tach NFD ra 'd' + khong co mark rieng -> xu ly thu cong
         return sb.toString().replace('\u0111', 'd').replace('\u0110', 'd');
     }
 
     /**
      * Tim slot "Chai Kinh Nghiem" trong GUI hien tai. Uu tien tim theo TEN HIEN THI cua item (chua
-     * "kinh nghiệm" hoac "linh dịch", khong phan biet hoa/thuong, chiu duoc font chu hoa nho Unicode
+     * "kinh nghiem" hoac "linh dich", khong phan biet hoa/thuong, chiu duoc font chu hoa nho Unicode
      * va co/khong dau) - chinh xac hon nhieu so voi doan theo loai item, vi GUI co the co nhieu tam
      * kinh mau khac nhau cho nhieu chuc nang khac nhau. Fallback: neu khong tim thay theo ten, lay
      * item *_stained_glass_pane DAU TIEN tim duoc.

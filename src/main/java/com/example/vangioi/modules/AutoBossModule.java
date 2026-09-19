@@ -427,7 +427,7 @@ public class AutoBossModule extends Module {
      * qua ngan so voi cooldown that, gay bam lai vo ich va nhan them cooldown moi).
      *
      * LUU Y: KHONG doi chieu theo ten item ("Tong Lenh") vi item nay dung font chu HOA
-     * NHO UNICODE DAC BIET cho ten hien thi (VD "ᴛốɴɢ ʟệɴʜ" - cac ky tu ᴛ/ɴ/ɢ/ʟ/ʜ la
+     * NHO UNICODE DAC BIET cho ten hien thi (VD "ToNG LeNH" - cac ky tu T/N/G/L/H la
      * code point rieng, KHAC hoan toan voi chu Viet thuong "T/n/g/l/h" du nhin giong het
      * nhau trong game do font). Neu dong chat cooldown cung chen ten item theo kieu
      * stylized nay, doi chieu theo "Tong Lenh" (chu thuong) se KHONG BAO GIO khop. Thay
@@ -438,13 +438,13 @@ public class AutoBossModule extends Module {
     private void onReceiveMessage(ReceiveMessageEvent event) {
         if (state == null) return;
         String text = event.getMessage().getString();
-        if (!text.contains("chờ") || !text.contains("dùng lại")) return;
+        if (!text.contains("cho") || !text.contains("dung lai")) return;
 
-        int idx = text.indexOf("chờ");
+        int idx = text.indexOf("cho");
         if (idx < 0) return;
 
         StringBuilder digits = new StringBuilder();
-        for (int i = idx + "chờ".length(); i < text.length(); i++) {
+        for (int i = idx + "cho".length(); i < text.length(); i++) {
             char c = text.charAt(i);
             if (Character.isDigit(c)) digits.append(c);
             else if (digits.length() > 0) break;
@@ -718,7 +718,7 @@ public class AutoBossModule extends Module {
 
     private boolean clickSlot(HandledScreen<?> screen, int slot) {
         ScreenHandler handler = screen.getScreenHandler();
-        // Đã gỡ bỏ điều kiện getStack().isEmpty() để tránh trường hợp server trả về item đặc biệt khiến client tưởng nhầm ô trống và bỏ qua click
+        // Da go bo dieu kien getStack().isEmpty() de tranh truong hop server tra ve item dac biet khien client tuong nham o trong va bo qua click
         if (slot < 0 || slot >= handler.slots.size()) return false;
         if (mc.interactionManager == null || mc.player == null) return false;
         mc.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, mc.player);

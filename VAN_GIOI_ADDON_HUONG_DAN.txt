@@ -1,0 +1,195 @@
+VAN GIOI ADDON - HUONG DAN CAI DAT VA SU DUNG
+================================================
+
+PHIEN BAN
+- Minecraft: 1.21.4
+- Fabric Loader: dung ban phu hop voi Minecraft 1.21.4
+- Java: 21 tro len
+- Meteor Client: bat buoc
+- Addon: Van Gioi Addon
+
+1. MOD BAT BUOC
+----------------
+- Fabric Loader 1.21.4
+- Java 21
+- Meteor Client cho Minecraft 1.21.4
+- Van Gioi Addon
+
+Neu thieu Meteor Client, addon se khong load duoc.
+
+2. MOD KHUYEN NGHI / TUY CHON
+------------------------------
+- Litematica: can cho module Fly To Placement.
+- MaLiLib: dependency cua Litematica, nen cai cung Litematica.
+- Litematica Printer: tuy chon, dung chung voi Fly To Placement de tu dong dat block.
+- Fabric API: tuy modpack co the da co san.
+- Language Reload: tuy chon, ho tro reload ngon ngu/font.
+
+Neu khong cai Litematica hoac MaLiLib:
+- Van Gioi Addon van khoi dong binh thuong.
+- Cac module khac van dung duoc.
+- Chi module Fly To Placement khong co tac dung vi khong co schematic Litematica.
+
+3. CAI DAT
+----------
+1. Cai Fabric Loader cho Minecraft 1.21.4.
+2. Cai Java 21.
+3. Cai Meteor Client dung ban 1.21.4.
+4. Chep van-gioi-addon-0.1.0.jar vao thu muc .minecraft/mods.
+5. Neu dung Fly To Placement, chep Litematica va MaLiLib vao mods.
+6. Mo game, vao Meteor -> Modules -> Van Gioi Addon.
+
+Font tieng Viet tuy chon:
+- Chep van-gioi-vietnamese-font.zip vao .minecraft/resourcepacks.
+- Bat pack Van Gioi Vietnamese Font trong Resource Packs.
+
+4. DANH SACH MODULE
+-------------------
+Auto Crop Farmer
+- Chon Item 1: item lam cay thay doi.
+- Chon Item 2: item dung de trong.
+- Chon Pos 1 va Pos 2 de tao vung.
+- Co auto trong, giam sat va tuoi cay.
+- Co refill Linh Dich theo Smart hoac mode thuong.
+- Command reset: .clear-farmer hoac .reset-farmer.
+
+Auto Crop Waterer
+- Tu dong tim vi tri can tuoi.
+- Tuoi theo khoang cach va delay da cai.
+- Ho tro di chuyen Normal, Fly hoac Goto.
+- Co refill Linh Dich.
+
+Auto Boss
+- weapon-slot: slot vu khi.
+- tool-slot: slot Truyen Tong Lenh.
+- difficulty: EASY, MEDIUM, HARD.
+- farm-mode: QUET hoac CLEAR.
+- attack-mode: SINGLE hoac COMBO.
+- click-mode: LEFT hoac RIGHT khi dung SINGLE.
+- click-delay-ticks: delay giua cac lan click.
+- gui-open-delay-ticks: delay sau khi GUI hien.
+- tool-select-delay-ticks: delay sau khi chon Truyen Tong Lenh.
+- gui-retry-after-ticks: thoi gian thu mo lai GUI.
+- gui-delay-ticks: delay giua cac lan click trong GUI.
+- travel-seconds: thoi gian cho qua boss.
+- extend-travel-if-not-ready: gia han neu chua chon xong GUI.
+- travel-extend-max-ticks: gioi han gia han.
+- fight-seconds: thoi gian danh khi SINGLE.
+- combo-repeat-count: so chu ky khi COMBO.
+- post-fight-delay-ticks: delay sau khi danh xong.
+- debug-log, debug-chat-echo, debug-include-tick-spam: debug.
+
+Auto Dotpha
+- item-slot: slot item do kiep, tu 1 den 9.
+- item-delay-ticks: delay truoc khi dung item.
+- command-delay-ticks: delay giua /dotpha va /dokiep.
+- item: mo Edit, bat dung 1 item custom.
+- refill-amount: neu item trong slot it hon muc nay thi refill.
+- Bat module la tu dong gui /dotpha.
+- Khi server yeu cau do kiep, module chuyen slot, dung item, chuyen lai slot cu.
+- Neu slot co item khac, module dua item do ra o trong roi nap item dung.
+- Neu inventory khong du item, module dung phan con lai va tu tat khi het.
+
+Auto Phoban
+- target: NGUC_THAN, TAN_TICH, DAU_TRUONG, DI_LANG.
+- scan-delay-ticks: delay quet GUI.
+- tool-slot: slot item mo GUI pho ban.
+- right-click-delay-ticks: delay truoc chuot phai.
+- open-retry-delay-ticks: delay thu mo lai GUI.
+- command-open-delay-ticks: delay goi lai /phoban neu slot trong.
+- F4: doi target pho ban.
+
+Auto Fish
+- rod-slot: slot can cau.
+- bait-slot: slot moi.
+- auto-rebait: tu dong gan moi.
+- auto-switch-rod: tu dong doi can sap hong.
+- auto-recast: tu dong quang can lai.
+- Co doc ActionBar va chat minigame.
+
+Auto Furnace
+- Quet cac lo trong vung da chon.
+- Chon truc X/Z, toc do bay, delay mo lo va timeout Baritone.
+- Ho tro GOTO hoac FLY.
+
+Auto Farm
+- Tu dong thu hoach va trong lai.
+- radius: ban kinh quet.
+- harvest-delay / plant-delay: delay thao tac.
+- Danh sach cay chin va block nen co the cau hinh.
+
+Auto Drop Vanilla
+- inventory: drop item trong inventory.
+- chi-hotbar: chi drop item hotbar.
+- gui-ruong-hostbar: drop item trong GUI container.
+- tick-delay: delay quet.
+- items: list item vanilla.
+- custom-items: list item custom, bam Edit de them/xoa/bat/tat.
+
+Auto Accept
+- title-contains: tu khoa tieu de GUI.
+- item-contains: tu khoa item can click.
+
+Auto Minigame
+- Doc CustomModelData va click slot muc tieu.
+- Cai theo setting cua module trong Meteor.
+
+Alchemical Pill Making
+- Chon cac mau stained glass pane se tu dong drop.
+- Co setting bo qua hotbar va delay thao tac.
+
+Chat Auto Responder
+- Tao profile tra loi chat.
+- Co the bat/tat tung profile trong GUI module.
+
+Fly To Placement
+- Can Litematica + MaLiLib.
+- Can load schematic va bat overlay Litematica.
+- speed: toc do bay.
+- search-radius: ban kinh tim block thieu.
+- hover-height: do cao bay tren block.
+- Neu khong co Litematica, module se canh bao va khong lam gi.
+
+Fly Goto
+- Bay thang den toa do X/Y/Z.
+- Co speed, delay va timeout.
+
+Auto Walk Straight
+- Di thang theo huong dang nhin.
+- Co dieu chinh input va gioi han drift.
+
+Linh Thao Locations
+- Hien ten Linh Thao lay tu lenh /linhthao tren world.
+- Co setting mau va kich thuoc chu.
+
+Chest Drop All Button
+- Them nut Drop All vao GUI ruong.
+- Co danh sach loai GUI va delay giua cac lan vut.
+
+GUI Dumper
+- Bat module de hien nut Dump GUI trong GUI container.
+- Luu tai: gui_dumps/[ip-server]/[ten-gui]/file.json.
+- Dump tiep cung GUI tao file1.json, file2.json...
+
+Experience HUD
+- HUD kinh nghiem, dang ky trong Meteor HUD.
+
+5. COMMAND
+----------
+.clear-farmer
+.reset-farmer
+.additem
+.additem <ten>
+.delitem <so-thu-tu>
+.itemlist
+.listitem
+.dslist
+
+6. LUU Y
+--------
+- Tat module neu dang thao tac thu cong de tranh xung dot hotbar/input.
+- Auto Boss can dung slot vu khi va Truyen Tong Lenh dung.
+- Auto Dotpha chi bat 1 item custom trong setting item.
+- Litematica va MaLiLib la mod tuy chon, chi can cho Fly To Placement.
+- Neu font tieng Viet bi mat dau trong toan client, bat resource pack Van Gioi Vietnamese Font.
+- JAR khong chua san mod Litematica, MaLiLib hoac Litematica Printer.

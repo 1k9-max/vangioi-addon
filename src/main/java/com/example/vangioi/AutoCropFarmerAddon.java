@@ -18,6 +18,7 @@ import com.example.vangioi.modules.ChestDropAllButton;
 import com.example.vangioi.modules.GuiDumperModule;
 import com.example.vangioi.modules.AutoFarm;
 import com.example.vangioi.modules.AutoFish;
+import com.example.vangioi.modules.AutoDotPhaModule;
 import com.example.vangioi.modules.AutoWalkStraightModule;
 import com.example.vangioi.modules.ChatAutoResponder;
 import com.example.vangioi.modules.FlyGotoModule;
@@ -57,6 +58,7 @@ public class AutoCropFarmerAddon extends MeteorAddon {
         Modules.get().add(new AutoMinigameModule());
         Modules.get().add(new AutoFarm());
         Modules.get().add(new AutoFish());
+        Modules.get().add(new AutoDotPhaModule());
         Modules.get().add(new LinhThaoLocations());
         Modules.get().add(new ChatAutoResponder());
         Modules.get().add(new FlyGotoModule());

@@ -7,9 +7,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * LinhDichRefiller
@@ -49,19 +47,6 @@ public class LinhDichRefiller {
     }
 
     // "Dich nguoc" chu hoa nho Unicode (small caps) ve chu Latin thuong de so sanh chuoi cho dung.
-    private static final Map<Character, Character> STYLE_MAP = new HashMap<>();
-    static {
-        String stylized = "ABCDEFGHIJKLMNOPRzTUVWYZ";
-        String normal   = "abcdefghijklmnoprstuvwyz";
-        for (int i = 0; i < stylized.length(); i++) {
-            STYLE_MAP.put(stylized.charAt(i), normal.charAt(i));
-        }
-        // Cac bien the/ky tu ngoai bang chinh hay gap them trong cac font "chu hoa nho" khac nhau
-        STYLE_MAP.put('S', 's');
-        STYLE_MAP.put('o', 'q');
-        STYLE_MAP.put('x', 'x');
-    }
-
     private Phase phase = Phase.IDLE;
     private int waitTicks = 0;
     private int timeoutTicks = 0;
@@ -220,25 +205,7 @@ public class LinhDichRefiller {
      * dong xac nhan hoan tat.
      */
     private static String normalizeForMatch(String rawText) {
-        StringBuilder sb = new StringBuilder(rawText.length());
-        for (int i = 0; i < rawText.length(); i++) {
-            char c = rawText.charAt(i);
-            Character mapped = STYLE_MAP.get(c);
-            sb.append(mapped != null ? mapped : c);
-        }
-        return stripVietnameseDiacritics(sb.toString().toLowerCase(Locale.ROOT));
-    }
-
-    private static String stripVietnameseDiacritics(String s) {
-        String normalized = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
-        StringBuilder sb = new StringBuilder(normalized.length());
-        for (char c : normalized.toCharArray()) {
-            // bo cac dau (combining marks) sau khi tach NFD
-            if (Character.getType(c) == Character.NON_SPACING_MARK) continue;
-            sb.append(c);
-        }
-        // dong 'd' (khong dau) trong tieng Viet tach NFD ra 'd' + khong co mark rieng -> xu ly thu cong
-        return sb.toString().replace('\u0111', 'd').replace('\u0110', 'd');
+        return TextNormalizer.normalize(rawText);
     }
 
     /**

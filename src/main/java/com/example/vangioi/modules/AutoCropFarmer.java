@@ -2,6 +2,7 @@ package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
 import com.example.vangioi.util.LinhDichRefiller;
+import com.example.vangioi.util.TextNormalizer;
 import com.example.vangioi.util.TravelController;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
@@ -893,7 +894,7 @@ public class AutoCropFarmer extends Module {
             log("[MONITORING] Tim thay " + hiddenStandInfo.size() + " cot X,Z co Gia do giap an.");
         }
 
-        String readyKeyword = harvestReadyKeyword.get().trim().toLowerCase();
+        String readyKeyword = TextNormalizer.normalize(harvestReadyKeyword.get().trim());
 
         // ===== Giai doan 1: QUET & CAP NHAT TRANG THAI cho toan bo vung =====
         // Chi doc du lieu va cap nhat pendingHarvest/pendingReplant/log - KHONG gui bat ky packet
@@ -923,7 +924,7 @@ public class AutoCropFarmer extends Module {
             // "san sang" TRUOC KHI block kip doi, tranh bi tuoi nham luc dang can thu hoach).
             if (!readyKeyword.isEmpty() && !pendingHarvest.contains(base) && !pendingReplant.contains(base)) {
                 String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
-                if (standText != null && standText.toLowerCase().contains(readyKeyword)) {
+                if (standText != null && TextNormalizer.normalize(standText).contains(readyKeyword)) {
                     isMature = true;
                     log("[MONITORING] base=" + base + " cropPos=" + cropPos
                         + " - Gia do giap bao TEXT chua tu khoa \"" + readyKeyword + "\" (\"" + standText

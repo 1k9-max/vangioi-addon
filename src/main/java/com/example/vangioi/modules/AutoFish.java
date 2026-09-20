@@ -2,6 +2,7 @@ package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
 import com.example.vangioi.util.ActionBarBridge;
+import com.example.vangioi.util.TextNormalizer;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.*;
@@ -617,7 +618,7 @@ public class AutoFish extends Module {
             return;
         }
 
-        String lower = line.toLowerCase(Locale.ROOT);
+        String lower = TextNormalizer.normalize(line);
 
         if (running) {
             if (lower.contains("da cau duoc ca") || lower.contains("da CaU duoC Ca")) {

@@ -1,6 +1,7 @@
 package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
+import com.example.vangioi.util.TextNormalizer;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.EnumSetting;
 import meteordevelopment.meteorclient.settings.IntSetting;
@@ -16,7 +17,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 
-import java.text.Normalizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -151,18 +151,7 @@ public class AutoPhobanModule extends Module {
     }
 
     private static String simplify(String value) {
-        if (value == null) return "";
-        String normalized = value.toLowerCase()
-            .replace("A", "a").replace("B", "b").replace("C", "c")
-            .replace("D", "d").replace("E", "e").replace("F", "f")
-            .replace("G", "g").replace("H", "h").replace("I", "i")
-            .replace("J", "j").replace("K", "k").replace("L", "l")
-            .replace("M", "m").replace("N", "n").replace("O", "o")
-            .replace("P", "p").replace("R", "r").replace("T", "t")
-            .replace("U", "u").replace("V", "v").replace("W", "w")
-            .replace("Y", "y").replace("Z", "z").replace("d", "d");
-        return Normalizer.normalize(normalized, Normalizer.Form.NFD)
-            .replaceAll("\\p{M}", "").replace("d", "d").replaceAll("\\s+", " ").trim();
+        return TextNormalizer.normalize(value).replaceAll("\\s+", " ").trim();
     }
 
     public enum PhoBanType {

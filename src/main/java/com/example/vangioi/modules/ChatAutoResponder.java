@@ -1,6 +1,7 @@
 package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
+import com.example.vangioi.util.TextNormalizer;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
@@ -182,7 +183,7 @@ public class ChatAutoResponder extends Module {
 
     private boolean containsIgnoreCase(String text, String trigger) {
         if (text == null || trigger == null || trigger.isBlank()) return false;
-        return text.toLowerCase(Locale.ROOT).contains(trigger.toLowerCase(Locale.ROOT));
+        return TextNormalizer.normalize(text).contains(TextNormalizer.normalize(trigger));
     }
 
     @Override

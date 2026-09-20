@@ -2,6 +2,7 @@ package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
 import com.example.vangioi.util.LinhDichRefiller;
+import com.example.vangioi.util.TextNormalizer;
 import com.example.vangioi.util.TravelController;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
@@ -505,7 +506,7 @@ public class AutoCropWaterer extends Module {
         log("[MONITORING] Chu ky quet: area=" + area.size() + " vi tri, tim thay " + hiddenStandInfo.size()
             + " cot X,Z co Gia do giap an (invisible).");
 
-        String keyword = needWaterKeyword.get().trim().toLowerCase();
+        String keyword = TextNormalizer.normalize(needWaterKeyword.get().trim());
 
         // ===== Giai doan 0: XAC NHAN cac vi tri dang cho sau khi da gui hanh dong tuoi =====
         // KHONG dua vao ket qua tra ve tuc thi cua interactBlock() (xem doWaterAction()) - thay vao do,
@@ -524,7 +525,7 @@ public class AutoCropWaterer extends Module {
                 BlockPos cropPos = base.up();
                 String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
                 boolean stillNeedsMatchingKeyword = standText != null
-                    && (keyword.isEmpty() || standText.toLowerCase().contains(keyword));
+                    && (keyword.isEmpty() || TextNormalizer.normalize(standText).contains(keyword));
 
                 waterAwaitingConfirm.remove(base);
                 waterConfirmTicksRemaining.remove(base);
@@ -563,7 +564,7 @@ public class AutoCropWaterer extends Module {
             String standText = hiddenStandInfo.get(packXZ(cropPos.getX(), cropPos.getZ()));
             if (standText == null) continue; // Khong co Gia do giap o cot nay -> chua can tuoi
 
-            if (!keyword.isEmpty() && !standText.toLowerCase().contains(keyword)) continue;
+            if (!keyword.isEmpty() && !TextNormalizer.normalize(standText).contains(keyword)) continue;
 
             pendingWater.add(base);
             log("[MONITORING] base=" + base + " cropPos=" + cropPos

@@ -1,6 +1,7 @@
 package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
+import com.example.vangioi.util.TextNormalizer;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.GenericSetting;
@@ -17,14 +18,10 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 
-import java.text.Normalizer;
 import java.util.ArrayDeque;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 public class AutoDotPhaModule extends Module {
-    private static final Map<Character, Character> STYLE_MAP = buildStyleMap();
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final Setting<Integer> itemSlot = sgGeneral.add(new IntSetting.Builder()
         .name("item-slot").description("Slot hotbar dung vat pham do kiep, tu 1 den 9.")
@@ -262,18 +259,7 @@ public class AutoDotPhaModule extends Module {
     }
 
     private static String normalize(String text) {
-        String lower = text == null ? "" : text.toLowerCase(Locale.forLanguageTag("vi"));
-        StringBuilder result = new StringBuilder(lower.length());
-        for (int i = 0; i < lower.length(); i++) result.append(STYLE_MAP.getOrDefault(lower.charAt(i), lower.charAt(i)));
-        return Normalizer.normalize(result.toString(), Normalizer.Form.NFD).replaceAll("\\p{M}", "").replace("đ", "d");
-    }
-
-    private static Map<Character, Character> buildStyleMap() {
-        Map<Character, Character> map = new HashMap<>();
-        String stylized = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀѕᴛᴜᴠᴡхʏᴢ";
-        String normal = "abcdefghijklmnopqrstuvwxyz";
-        for (int i = 0; i < stylized.length(); i++) map.put(stylized.charAt(i), normal.charAt(i));
-        return map;
+        return TextNormalizer.normalize(text);
     }
 
     private record Action(Runnable run, int delay) {}

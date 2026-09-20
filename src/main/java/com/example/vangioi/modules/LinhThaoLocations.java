@@ -1,6 +1,7 @@
 package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
+import com.example.vangioi.util.TextNormalizer;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.render.Render2DEvent;
 import meteordevelopment.meteorclient.renderer.text.TextRenderer;
@@ -48,12 +49,12 @@ public class LinhThaoLocations extends Module {
     );
 
     // Header line that marks the start of a new /linhthao result list
-    private static final Pattern HEADER = Pattern.compile("DANH\\s*SaCH\\s*Vi\\s*TRi\\s*LINH\\s*THaO");
+    private static final Pattern HEADER = Pattern.compile("danh\\s*sach\\s*vi\\s*tri\\s*linh\\s*thao");
 
     // Each location line, e.g.:
     // - TeN: NGoC TuY CHI | BaC: LINH | ToA do: x:-1516, Y:12, Z:-298 | MAP: Bi CaNH
     private static final Pattern LINE = Pattern.compile(
-        "TeN:\\s*(.+?)\\s*\\|\\s*BaC:\\s*(.+?)\\s*\\|\\s*ToA\\s*do:\\s*x:(-?\\d+),\\s*Y:(-?\\d+),\\s*Z:(-?\\d+)\\s*\\|\\s*MAP:\\s*(.+)"
+        "ten:\\s*(.+?)\\s*\\|\\s*bac:\\s*(.+?)\\s*\\|\\s*toa\\s*do:\\s*x:(-?\\d+),\\s*y:(-?\\d+),\\s*z:(-?\\d+)\\s*\\|\\s*map:\\s*(.+)"
     );
 
     private final List<Entry> entries = new ArrayList<>();
@@ -65,7 +66,7 @@ public class LinhThaoLocations extends Module {
 
     @EventHandler
     private void onMessage(ReceiveMessageEvent event) {
-        String msg = event.getMessage().getString();
+        String msg = TextNormalizer.normalize(event.getMessage().getString());
 
         // New list starting -> clear old markers
         if (HEADER.matcher(msg).find()) {

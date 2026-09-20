@@ -1,6 +1,7 @@
 package com.example.vangioi.modules;
 
 import com.example.vangioi.AutoCropFarmerAddon;
+import com.example.vangioi.util.TextNormalizer;
 import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.BoolSetting;
@@ -437,7 +438,7 @@ public class AutoBossModule extends Module {
     @EventHandler
     private void onReceiveMessage(ReceiveMessageEvent event) {
         if (state == null) return;
-        String text = event.getMessage().getString();
+        String text = TextNormalizer.normalize(event.getMessage().getString());
         if (!text.contains("cho") || !text.contains("dung lai")) return;
 
         int idx = text.indexOf("cho");

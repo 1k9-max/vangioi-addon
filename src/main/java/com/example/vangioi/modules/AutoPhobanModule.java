@@ -158,6 +158,20 @@ public class AutoPhobanModule extends Module {
                 return;
             }
         }
+        clickPreviousPage(screen);
+    }
+
+    private void clickPreviousPage(HandledScreen<?> screen) {
+        ScreenHandler handler = screen.getScreenHandler();
+        for (int i = 0; i < handler.slots.size(); i++) {
+            ItemStack stack = handler.getSlot(i).getStack();
+            if (stack.isEmpty()) continue;
+            String name = simplify(stack.getName().getString());
+            if (name.contains("trang truoc") || name.contains("previous") || name.equals("<")) {
+                click(screen, i);
+                return;
+            }
+        }
     }
 
     private void clickNamed(HandledScreen<?> screen, String... names) {

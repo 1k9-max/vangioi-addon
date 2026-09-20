@@ -3,6 +3,7 @@ package com.example.vangioi.modules;
 import com.example.vangioi.AutoCropFarmerAddon;
 import com.example.vangioi.util.TextNormalizer;
 import meteordevelopment.meteorclient.events.world.TickEvent;
+import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.EnumSetting;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
@@ -43,9 +44,15 @@ public class AutoPhobanModule extends Module {
         .sliderMin(20)
         .sliderMax(100)
         .build());
+    private final Setting<Boolean> autoNextPage = sgGeneral.add(new BoolSetting.Builder()
+        .name("auto-next-page")
+        .description("Tu dong bam nut sang trang tiep theo neu khong tim thay pho ban muc tieu trong trang hien tai.")
+        .defaultValue(true)
+        .build());
     private int timer;
     private int commandTimer;
     private boolean wasF4Down;
+    private String lastActionSignature;
 
     public AutoPhobanModule() {
         super(AutoCropFarmerAddon.CATEGORY, "auto-phoban", "Tim va vao pho ban tren trang GUI hien tai, khong tu dong doi trang.");
@@ -56,6 +63,7 @@ public class AutoPhobanModule extends Module {
         timer = 0;
         commandTimer = 0;
         wasF4Down = false;
+        lastActionSignature = null;
     }
 
     @EventHandler
@@ -63,6 +71,7 @@ public class AutoPhobanModule extends Module {
         if (mc.player == null) return;
         handleF4();
         if (!(mc.currentScreen instanceof HandledScreen<?> screen)) {
+            lastActionSignature = null;
             if (mc.currentScreen != null) return;
             if (++commandTimer >= commandOpenDelay.get()) {
                 if (mc.player.networkHandler != null) mc.player.networkHandler.sendChatCommand("phoban");
@@ -91,6 +100,7 @@ public class AutoPhobanModule extends Module {
                 case DAU_TRUONG -> PhoBanType.DI_LANG;
                 case DI_LANG -> PhoBanType.NGUC_THAN;
             });
+            lastActionSignature = null;
             info("AutoPB target: " + target.get().displayName);
         }
         wasF4Down = down;
@@ -130,7 +140,24 @@ public class AutoPhobanModule extends Module {
             bestSlot = i;
             bestName = name;
         }
-        if (bestSlot >= 0) click(screen, bestSlot);
+        if (bestSlot >= 0) {
+            click(screen, bestSlot);
+        } else if (autoNextPage.get()) {
+            clickNextPage(screen);
+        }
+    }
+
+    private void clickNextPage(HandledScreen<?> screen) {
+        ScreenHandler handler = screen.getScreenHandler();
+        for (int i = 0; i < handler.slots.size(); i++) {
+            ItemStack stack = handler.getSlot(i).getStack();
+            if (stack.isEmpty()) continue;
+            String name = simplify(stack.getName().getString());
+            if (name.contains("trang ke") || name.contains("mui ten") || name.equals("next") || name.equals(">")) {
+                click(screen, i);
+                return;
+            }
+        }
     }
 
     private void clickNamed(HandledScreen<?> screen, String... names) {
@@ -145,9 +172,24 @@ public class AutoPhobanModule extends Module {
     }
 
     private void click(HandledScreen<?> screen, int slot) {
-        if (mc.interactionManager != null && mc.player != null) {
-            mc.interactionManager.clickSlot(screen.getScreenHandler().syncId, slot, 0, SlotActionType.PICKUP, mc.player);
+        if (mc.interactionManager == null || mc.player == null) return;
+        String signature = guiSignature(screen);
+        if (signature.equals(lastActionSignature)) return;
+        lastActionSignature = signature;
+        mc.interactionManager.clickSlot(screen.getScreenHandler().syncId, slot, 0, SlotActionType.PICKUP, mc.player);
+    }
+
+    private String guiSignature(HandledScreen<?> screen) {
+        StringBuilder signature = new StringBuilder(simplify(screen.getTitle().getString()));
+        for (var slot : screen.getScreenHandler().slots) {
+            ItemStack stack = slot.getStack();
+            signature.append('|').append(stack.getCount()).append(':').append(simplify(stack.getName().getString()));
+            LoreComponent lore = stack.get(DataComponentTypes.LORE);
+            if (lore != null) {
+                for (var line : lore.lines()) signature.append(':').append(simplify(line.getString()));
+            }
         }
+        return signature.toString();
     }
 
     private static String simplify(String value) {

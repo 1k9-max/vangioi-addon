@@ -86,7 +86,7 @@ Auto Dotpha
 - Neu inventory khong du item, module dung phan con lai va tu tat khi het.
 
 Auto Phoban
-- target: NGUC_THAN, TAN_TICH, DAU_TRUONG, DI_LANG.
+- target: NGUC_THAN, TAN_TICH, DAU_TRUONG.
 - scan-delay-ticks: delay quet GUI.
 - tool-slot: slot item mo GUI pho ban.
 - right-click-delay-ticks: delay truoc chuot phai.

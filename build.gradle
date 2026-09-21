@@ -64,9 +64,27 @@ jar {
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     it.options.release = 21
+}
+
+tasks.register("sourceArchive", Zip) {
+    archiveFileName = "${project.archives_base_name}-${project.version}-src.zip"
+    destinationDirectory = layout.buildDirectory.dir("source-dist")
+    from("src") {
+        into("src")
+    }
+    from("build.gradle")
+    from("gradle.properties")
+    from("settings.gradle")
+    from("README.md")
+    from("LICENSE")
+}
+
+tasks.named("build") {
+    finalizedBy("sourceArchive")
 }

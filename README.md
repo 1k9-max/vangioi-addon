@@ -49,5 +49,6 @@ cua tung server/plugin (khong phai vanilla Minecraft thuan), nen ban co the can:
 
 ## CI/CD
 
-`.github/workflows/build.yml` build project bang JDK 21 tren moi push/PR vao `main`,
-va upload file .jar thanh artifact cua workflow run.
+`.github/workflows/build.yml` build project bang JDK 21 tren moi push/PR vao `main`.
+Artifact gom source ZIP, main JAR va sources JAR. Moi push vao `main` cung tao mot
+GitHub Release voi tag `build-<so-lan-chay-action>` va tu dong sinh release notes.

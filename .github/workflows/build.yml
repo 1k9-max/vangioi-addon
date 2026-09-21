@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,9 +37,23 @@ jobs:
             gradle clean build --refresh-dependencies --no-daemon
           fi
 
-      - name: Upload build artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vangioi-addon
-          path: build/libs/*.jar
+          name: vangioi-addon-build-${{ github.run_number }}
+          path: |
+            build/source-dist/*-src.zip
+            build/libs/*.jar
           if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            build/source-dist/*-src.zip
+            build/libs/*.jar

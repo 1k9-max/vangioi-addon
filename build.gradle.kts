@@ -88,7 +88,7 @@ dependencies {
     modCompileOnly(files("libs/malilib-fabric-1_21_4-0_23_5.jar"))
 
     library("meteordevelopment:orbit:${properties["orbit_version"] as String}")
-    library("meteordevelopment:starscript:${properties["starscript_version"] as String}")
+    library("meteordevelopment:starscript:${properties["orbit_version"] as String}")
     library("org.reflections:reflections:${properties["reflections_version"] as String}")
     library("io.netty:netty-handler-proxy:${properties["netty_version"] as String}") { isTransitive = false }
     library("io.netty:netty-codec-socks:${properties["netty_version"] as String}") { isTransitive = false }
@@ -152,7 +152,6 @@ tasks {
     java {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
-        // Đã xóa hoàn toàn withSourcesJar() và withJavadocJar() để không sinh file src/javadoc nữa
     }
 
     withType<JavaCompile> {
@@ -161,7 +160,7 @@ tasks {
 
     shadowJar {
         configurations = listOf(project.configurations.shadow.get())
-        archiveClassifier.set("") // Xóa bỏ chữ -all thừa thãi
+        archiveClassifier.set("all-dev") // Đặt hậu tố riêng cho bản shadow tạm thời để tránh xung đột
 
         val licenseSuffix = project.base.archivesName.get()
         from("LICENSE") {
@@ -178,7 +177,7 @@ tasks {
     remapJar {
         dependsOn(shadowJar)
         inputFile.set(shadowJar.get().archiveFile)
-        archiveClassifier.set("") // Đảm bảo file jar cuối cùng hoàn toàn sạch tên
+        archiveClassifier.set("") // Đưa file cuối cùng về dạng sạch sẽ không có hậu tố thừa
     }
 }
 

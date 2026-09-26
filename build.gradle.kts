@@ -191,3 +191,16 @@ publishing {
         }
     }
 }
+tasks.register<org.gradle.api.tasks.bundling.Zip>("sourceDistribution") {
+    archiveFileName.set("van-gioi-client-${project.version}-sources.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+
+    from(projectDir) {
+        exclude(".gradle/**", "build/**", "launch/build/**", ".git/**", ".idea/**", "**/node_modules/**")
+    }
+}
+
+tasks.named("build") {
+    dependsOn("sourceDistribution")
+}
+

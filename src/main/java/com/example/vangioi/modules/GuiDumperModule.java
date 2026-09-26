@@ -75,32 +75,18 @@ public class GuiDumperModule extends Module {
                 slotJson.addProperty("itemId", stack.getItem().toString());
                 slotJson.addProperty("itemName", stack.getName().getString());
                 slotJson.addProperty("count", stack.getCount());
-                slotJson.addProperty("maxCount", stack.getMaxCount()); // Đã thêm giới hạn stack (VD: 16, 64)
+                slotJson.addProperty("maxCount", stack.getMaxCount()); 
                 slotJson.addProperty("maxDamage", stack.getMaxDamage());
                 slotJson.addProperty("damage", stack.getDamage());
 
-                // ==========================================
-                // VÙNG DUMP DATA (NBT / COMPONENTS)
-                // ==========================================
-                
+                // Sử dụng getComponents() thay cho NBT trong Minecraft 1.21+
                 try {
-                    /* CÁCH 1: Dành cho MINECRAFT 1.20.4 TRỞ XUỐNG (Dùng NBT) 
-                     * Nếu bạn code bản 1.21 thì hãy XÓA hoặc COMMENT 3 dòng dưới này lại.
-                     */
-                    if (stack.hasNbt() && stack.getNbt() != null) {
-                        slotJson.addProperty("nbtData", stack.getNbt().toString());
+                    if (stack.getComponents() != null) {
+                        slotJson.addProperty("componentData", stack.getComponents().toString());
                     }
-                    
-                    /* CÁCH 2: Dành cho MINECRAFT 1.21 TRỞ LÊN (Dùng Components) 
-                     * BỎ COMMENT dòng bên dưới nếu bạn đang dùng 1.21+
-                     */
-                    // slotJson.addProperty("componentData", stack.getComponents().toString());
-
                 } catch (Exception e) {
-                    // Bỏ qua nếu có lỗi khi trích xuất data
                     slotJson.addProperty("dataError", e.getMessage());
                 }
-                // ==========================================
             }
             slots.add(slotJson);
         }

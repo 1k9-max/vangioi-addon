@@ -45,6 +45,37 @@ jobs:
             build/libs/*.jar
           if-no-files-found: error
 
+      - name: Get commit message
+        id: commit_info
+        run: |
+          echo "message=$(git log -1 --pretty=format:'\%s')" >> $GITHUB_OUTPUT
+
+      - name: Send File and Commit to Discord Webhook
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # Tìm file .jar trong thư mục build/libs
+          JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
+          
+          if [ -f "$JAR_FILE" ]; then
+            COMMIT_MSG="${{ steps.commit_info.outputs.message }}"
+            RUN_NUM="${{ github.run_number }}"
+            REPO_NAME="${{ github.repository }}"
+            COMMIT_SHA="${{ github.sha }}"
+            SHORT_SHA=$(echo$COMMIT_SHA | cut -c1-7)
+            
+            # Nội dung tin nhắn kèm thông tin commit
+            MESSAGE="🚀 **Build thành công số #$RUN_NUM**\n📦 Repository: \`$REPO_NAME\`\n📝 Commit: \`$COMMIT_MSG\` (\`$SHORT_SHA\`)\n🔗 [Xem chi tiết trên GitHub](https://github.com/$REPO_NAME/actions/runs/${{ github.run_id }})"
+            
+            # Gửi file .jar cùng nội dung lên Discord thông qua curl
+            curl -F "file0=@$JAR_FILE" \
+                 -F "payload_json={\"content\": \"$MESSAGE\"}" \
+                 "$DISCORD_WEBHOOK_URL"
+          else
+            echo "Không tìm thấy file .jar để gửi lên Discord!"
+            exit 1
+          fi
+
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2

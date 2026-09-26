@@ -1,23 +1,19 @@
 {
   "schemaVersion": 1,
-  "name": "Van Gioi Client (Meteor fork)",
+  "name": "Architectury",
   "id": "${mod_id}",
   "version": "${version}",
-  "description": "Van Gioi modules integrated into a transparent GPL-3.0 fork of Meteor Client.",
+  "description": "A intermediary api aimed to ease developing multiplatform mods.",
   "authors": [
-    "MineGame159",
-    "squidoodly",
-    "seasnail",
-    "oibanoi874"
+    "shedaniel"
   ],
   "contact": {
-    "homepage": "https://meteorclient.com",
-    "issues": "https://github.com/MeteorDevelopment/meteor-client/issues",
-    "sources": "https://github.com/MeteorDevelopment/meteor-client",
-    "discord": "https://meteorclient.com/discord"
+    "issues": "https://github.com/architectury/architectury-api/issues",
+    "sources": "https://github.com/architectury/architectury-api",
+    "homepage": "https://architectury.github.io/architectury-documentations/"
   },
-  "license": "GPL-3.0",
-  "icon": "assets/vangioi-addon-icon.png",
+  "license": "LGPL-3",
+  "icon": "assets/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [

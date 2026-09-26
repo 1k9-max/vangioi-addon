@@ -1,54 +1,60 @@
-# Van Gioi Addon (Meteor Client Addon)
 
-Addon cho Meteor Client (Fabric, Minecraft 1.21.4, Java 21) gom cac tinh nang tu dong hoat dong:
-Auto Boss, Auto Fish, Auto Crop, va cac helper phu tro cho server Van Gioi.
+<p align="center">
+<img src="https://meteorclient.com/icon.png" alt="meteor-client-logo" width="15%"/>
+</p>
 
-## Thanh phan
+<h1 align="center">Van Gioi Client (Meteor fork)</h1>
+<p align="center">A Minecraft Fabric Utility Mod for anarchy servers.</p>
 
-- **Module `AlchemicalPillMaking`** (`com.example.vangioi.modules.AlchemicalPillMaking`)
-  thay cho module Luyen Dan cu cua LVT; chi drop cac mau stained-glass-pane da chon.
-- **Module `AutoPhobanModule`** (`com.example.vangioi.modules.AutoPhobanModule`)
-  chuyen logic AutoPB sang Meteor, quet va click tren trang GUI hien tai, khong tu dong doi trang.
-- **Module `AutoMinigameModule`** (`com.example.vangioi.modules.AutoMinigameModule`)
-  chuyen logic Ghep Do, doc CustomModelData va click slot muc tieu.
-- **Module `AutoCropFarmer`** (`com.example.vangioi.modules.AutoCropFarmer`)
-  State machine 6 buoc: WAITING_ITEM_1 -> WAITING_ITEM_2 -> SELECT_POS_1 -> SELECT_POS_2
-  -> AUTO_PLANTING -> MONITORING. Xem javadoc dau file de biet chi tiet tung buoc.
-- **Command `.clear-farmer`** (alias `.reset-farmer`)
-  (`com.example.vangioi.commands.ClearFarmerCommand`) - goi `forceReset()` de xoa
-  toan bo du lieu tam va dua module ve trang thai ban dau.
+<div align="center">
+    <a href="https://discord.gg/bBGQZvd"><img src="https://img.shields.io/discord/689197705683140636?logo=discord" alt="Discord"/></a>
+    <br>
+    <img src="https://img.shields.io/github/last-commit/MeteorDevelopment/meteor-client" alt="GitHub last commit"/>
+    <img src="https://img.shields.io/github/commit-activity/w/MeteorDevelopment/meteor-client" alt="GitHub commit activity"/>
+    <img src="https://img.shields.io/github/contributors/MeteorDevelopment/meteor-client" alt="GitHub contributors"/>
+    <br>
+    <img src="https://img.shields.io/github/languages/code-size/MeteorDevelopment/meteor-client" alt="GitHub code size in bytes"/>
+    <img src="https://img.shields.io/endpoint?url=https://ghloc.vercel.app/api/MeteorDevelopment/meteor-client/badge?filter=.java$&label=lines%20of%20code&color=blue" alt="GitHub lines of code"/>
+</div>
 
-## Build
+## Usage
 
-Yeu cau: JDK 21.
+### Building
+- Clone this repository
+- Run `./gradlew build`
 
-```bash
-./gradlew build
-```
+### Installation
+Follow the [guide](https://meteorclient.com/faq/installation) on the wiki.
 
-File .jar ket qua nam trong `build/libs/`.
+## Contributions
+We will review and help with all reasonable pull requests as long as the guidelines below are met.
 
-## Truoc khi build lan dau
+- The license header must be applied to all java source code files.
+- IDE or system-related files should be added to the `.gitignore`, never committed in pull requests.
+- In general, check existing code to make sure your code matches relatively close to the code already in the project.
+- Favour readability over compactness.
+- If you need help, check out the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html) for a reference.
 
-Mo `gradle.properties` va kiem tra dong `meteor_version` khop voi build Meteor Client
-thuc te cho 1.21.4 duoc publish tai:
-https://maven.meteordev.org/#/releases/meteordevelopment/meteor-client
+## Bugs and Suggestions
+Bug reports and suggestions should be made in this repo's [issue tracker](https://github.com/MeteorDevelopment/meteor-client/issues) using the templates provided.  
+Please provide as much information as you can to best help us understand your issue and give a better chance of it being resolved.
 
-Meteor thay doi so hieu phien ban theo tung dot release/snapshot, nen gia tri mac dinh
-trong file nay co the can cap nhat truoc khi Gradle resolve duoc dependency.
+## Donations
+All of our work is completely free and non-profit (donations pay only for hosting costs), therefore we are very grateful for all donations made to support us in running our community.  
+Donations can be made via our [website](https://meteorclient.com/donate) and the minimum amount to get donor benefits is €5.  
+You will be rewarded with a role on our Discord server and a customisable in-game cape.  
+⚠️ _Make sure to create a Meteor account and link your Discord and Minecraft accounts to fully experience your rewards._ ⚠️
 
-## Luu y quan trong ve co che AUTO_PLANTING / MONITORING
+## Credits
+[Cabaletta](https://github.com/cabaletta) and [WagYourTail](https://github.com/wagyourtail) for [Baritone](https://github.com/cabaletta/baritone)  
+The [Fabric Team](https://github.com/FabricMC) for [Fabric](https://github.com/FabricMC/fabric-loader) and [Yarn](https://github.com/FabricMC/yarn)
 
-Logic o buoc 5 va 6 duoc viet dua tren mo ta yeu cau (Armor Stand an danh dau vi tri,
-theo doi thay doi BlockState de nhan biet cay da lon/bien doi). Day la co che dac thu
-cua tung server/plugin (khong phai vanilla Minecraft thuan), nen ban co the can:
+## Licensing
+This project is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html). 
 
-- Dieu chinh `armor-stand-search-radius` trong settings cua module cho phu hop.
-- Dieu chinh lai `handleMonitoring()` trong `AutoCropFarmer.java` neu server cua ban
-  dung co che khac (vi du: NBT rieng, block khac, tag rieng, v.v).
+If you use **ANY** code from the source:
+- You must disclose the source code of your modified work and the source code you took from this project. This means you are not allowed to use code from this project (even partially) in a closed-source and/or obfuscated application.
+- You must state clearly and obviously to all end users that you are using code from this project.
+- Your application must also be licensed under the same license.
 
-## CI/CD
-
-`.github/workflows/build.yml` build project bang JDK 21 tren moi push/PR vao `main`.
-Artifact gom source ZIP, main JAR va sources JAR. Moi push vao `main` cung tao mot
-GitHub Release voi tag `build-<so-lan-chay-action>` va tu dong sinh release notes.
+*If you have any other questions, check our [FAQ](https://meteorclient.com/faq) or ask in our [Discord](https://meteorclient.com/discord) server.*

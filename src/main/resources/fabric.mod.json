@@ -1,35 +1,53 @@
 {
   "schemaVersion": 1,
-  "id": "van-gioi-addon",
+  "name": "Van Gioi Client (Meteor fork)",
+  "id": "${mod_id}",
   "version": "${version}",
-  "name": "Van Gioi Addon",
-  "description": "Meteor Client addon: tu dong trong lai, boss, cau ca va cac tinh nang ho tro Van Gioi.",
+  "description": "Van Gioi modules integrated into a transparent GPL-3.0 fork of Meteor Client.",
   "authors": [
+    "MineGame159",
+    "squidoodly",
+    "seasnail",
     "oibanoi874"
   ],
   "contact": {
-    "repo": "https://github.com/your-username/vangioi-addon"
+    "homepage": "https://meteorclient.com",
+    "issues": "https://github.com/MeteorDevelopment/meteor-client/issues",
+    "sources": "https://github.com/MeteorDevelopment/meteor-client",
+    "discord": "https://meteorclient.com/discord"
   },
-  "icon": "assets/vangioi/icon.png",
+  "license": "GPL-3.0",
+  "icon": "assets/vangioi-addon-icon.png",
   "environment": "client",
   "entrypoints": {
+    "client": [
+      "meteordevelopment.meteorclient.MeteorClient"
+    ],
     "meteor": [
       "com.example.vangioi.AutoCropFarmerAddon"
     ]
   },
   "mixins": [
+    "meteor-client.mixins.json",
+    "meteor-client-baritone.mixins.json",
+    "meteor-client-indigo.mixins.json",
+    "meteor-client-sodium.mixins.json",
+    "meteor-client-lithium.mixins.json",
+    "meteor-client-viafabricplus.mixins.json",
     "vangioi-addon.mixins.json"
   ],
-  "custom": {
-    "meteor-client:color": "80,200,120"
-  },
+  "accessWidener": "meteor-client.accesswidener",
   "depends": {
     "java": ">=21",
-    "minecraft": ["${mc_version}"],
-    "meteor-client": "*"
+    "minecraft": ["${minecraft_version}"],
+    "fabricloader": ">=${loader_version}"
   },
-  "recommends": {
-    "litematica": "*",
-    "malilib": "*"
+  "breaks": {
+    "optifabric": "*",
+    "feather": "*",
+    "origins": "*",
+    "wurst": "*",
+    "sodium": "<0.6.5",
+    "morechathistory": "*"
   }
 }

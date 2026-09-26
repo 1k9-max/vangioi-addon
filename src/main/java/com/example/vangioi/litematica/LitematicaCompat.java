@@ -1,6 +1,5 @@
 package com.example.vangioi.litematica;
 
-import com.example.vangioi.AutoCropFarmerAddon;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Item;
@@ -36,7 +35,6 @@ public final class LitematicaCompat {
         } catch (Throwable t) {
             // Catch every Throwable (including NoClassDefFoundError/NoSuchMethodError) so a different
             // Litematica version doesn't crash the whole addon - only this feature gets disabled.
-            AutoCropFarmerAddon.LOG.error("[Obot Addon] Failed to read Material List from Litematica", t);
             return Collections.emptyMap();
         }
     }
@@ -70,7 +68,6 @@ public final class LitematicaCompat {
         try {
             return LitematicaAccess.findNearestMissingBlockPos(mc, center, maxRadius, skip);
         } catch (Throwable t) {
-            AutoCropFarmerAddon.LOG.error("[Obot Addon] Failed to read Litematica's schematic overlay", t);
             return null;
         }
     }

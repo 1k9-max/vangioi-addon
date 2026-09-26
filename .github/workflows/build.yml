@@ -1,59 +1,37 @@
-name: Build
+name: Build Van Gioi Client
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout repository
+      - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'microsoft'
+          distribution: temurin
           java-version: '21'
 
-      - name: Setup Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Grant execute permission for gradlew (if present)
-        run: |
-          if [ -f "./gradlew" ]; then chmod +x ./gradlew; fi
-
-      - name: Build with Gradle
-        run: |
-          if [ -f "./gradlew" ]; then
-            ./gradlew clean build --refresh-dependencies --no-daemon
-          else
-            gradle clean build --refresh-dependencies --no-daemon
-          fi
+      - name: Build client and source archive
+        run: chmod +x gradlew && ./gradlew --no-daemon build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vangioi-addon-build-${{ github.run_number }}
+          name: van-gioi-client
           path: |
-            build/source-dist/*-src.zip
             build/libs/*.jar
+            build/distributions/*.zip
           if-no-files-found: error
-
-      - name: Create GitHub Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: Build ${{ github.run_number }}
-          target_commitish: ${{ github.sha }}
-          generate_release_notes: true
-          files: |
-            build/source-dist/*-src.zip
-            build/libs/*.jar

@@ -4,7 +4,11 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "InGameHudMixin",
-    "ChestDropAllScreenMixin"
+    "ChestDropAllScreenMixin",
+    "MoonEnterMixin",
+    "MoonGuardMixin",
+    "MeteorFolderMixin",
+    "VanGioiDisplayDefaultsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

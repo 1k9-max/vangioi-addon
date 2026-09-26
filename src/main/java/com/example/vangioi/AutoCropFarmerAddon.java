@@ -5,6 +5,8 @@ import com.example.vangioi.commands.ClearFarmerCommand;
 import com.example.vangioi.commands.ClearWatererCommand;
 import com.example.vangioi.commands.DelItemCommand;
 import com.example.vangioi.commands.ItemListCommand;
+import com.example.vangioi.commands.MoonCommand;
+import com.example.vangioi.commands.MoonOffCommand;
 import com.example.vangioi.modules.AlchemicalPillMaking;
 import com.example.vangioi.modules.AutoMinigameModule;
 import com.example.vangioi.modules.AutoAcceptModule;
@@ -26,7 +28,6 @@ import com.example.vangioi.modules.FlyToPlacementModule;
 import com.example.vangioi.modules.LinhThaoLocations;
 import com.example.vangioi.hud.ExperienceHud;
 import com.mojang.logging.LogUtils;
-import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
 import meteordevelopment.meteorclient.commands.Commands;
 import meteordevelopment.meteorclient.systems.modules.Category;
@@ -42,10 +43,14 @@ import org.slf4j.Logger;
 public class AutoCropFarmerAddon extends MeteorAddon {
     public static final Logger LOG = LogUtils.getLogger();
     public static final Category CATEGORY = new Category("Van Gioi Addon");
+    public static final Category FARM_CATEGORY = new Category("Van Gioi Addon / Farm");
+    public static final Category GAME_CATEGORY = new Category("Van Gioi Addon / Game");
+    public static final Category TRAVEL_CATEGORY = new Category("Van Gioi Addon / Travel");
+    public static final Category UTILITY_CATEGORY = new Category("Van Gioi Addon / Utility");
 
     @Override
     public void onInitialize() {
-        LOG.info("Initializing Van Gioi Addon");
+        LOG.info("Registering Van Gioi modules in Van Gioi Client (Meteor fork)");
         Hud.get().register(ExperienceHud.INFO);
 
         // Modules
@@ -75,11 +80,17 @@ public class AutoCropFarmerAddon extends MeteorAddon {
         Commands.add(new AddItemCommand());
         Commands.add(new DelItemCommand());
         Commands.add(new ItemListCommand());
+        Commands.add(new MoonCommand());
+        Commands.add(new MoonOffCommand());
     }
 
     @Override
     public void onRegisterCategories() {
         Modules.registerCategory(CATEGORY);
+        Modules.registerCategory(FARM_CATEGORY);
+        Modules.registerCategory(GAME_CATEGORY);
+        Modules.registerCategory(TRAVEL_CATEGORY);
+        Modules.registerCategory(UTILITY_CATEGORY);
     }
 
     @Override
@@ -88,8 +99,7 @@ public class AutoCropFarmerAddon extends MeteorAddon {
     }
 
     @Override
-    public GithubRepo getRepo() {
-        // Thay bang repo GitHub thuc te cua ban de Meteor co the check update.
-        return new GithubRepo("your-username", "van-gioi-addon");
+    public meteordevelopment.meteorclient.addons.GithubRepo getRepo() {
+        return null;
     }
 }

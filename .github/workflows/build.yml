@@ -54,31 +54,32 @@ jobs:
           JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
           
           if [ -f "$JAR_FILE" ]; then
-            # Lấy thông điệp commit an toàn từ GitHub context
-            COMMIT_MSG="${{ github.event.head_commit.message }}"
-            if [ -z "$COMMIT_MSG" ]; then
-              COMMIT_MSG="${{ github.event.pull_request.title }}"
-            fi
+            # Lấy thông điệp commit an toàn bằng git log trực tiếp
+            COMMIT_MSG=$(git log -1 --pretty=format:'%s')
             if [ -z "$COMMIT_MSG" ]; then
               COMMIT_MSG="Cập nhật mã nguồn"
             fi
             
             RUN_NUM="${{ github.run_number }}"
-            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            SHORT_SHA=$(git rev-parse --short HEAD)
             
-            # Nội dung tin nhắn gọn gàng, không có repo và link
-            DISCORD_MSG="🚀 **Build thành công số #$RUN_NUM**
-📝 **Commit:** $COMMIT_MSG (\`$SHORT_SHA\`)"
-
-            export DISCORD_MSG
+            # Gán giá trị vào biến môi trường chạy Python
+            export RUN_NUM
+            export COMMIT_MSG
+            export SHORT_SHA
             export JAR_FILE
             
-            # Gửi tệp jar và tin nhắn lên Discord thông qua Python
+            # Thực thi gửi tin nhắn kèm file qua Python
             python3 -c '
 import os, urllib.request, json
+
 url = os.environ["DISCORD_WEBHOOK_URL"]
-msg = os.environ["DISCORD_MSG"]
+run_num = os.environ["RUN_NUM"]
+commit_msg = os.environ["COMMIT_MSG"]
+short_sha = os.environ["SHORT_SHA"]
 jar_path = os.environ["JAR_FILE"]
+
+msg = f"🚀 **Build thành công số #{run_num}**\n📝 **Commit:** {commit_msg} (`{short_sha}`)"
 
 boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
 data = []
@@ -93,6 +94,7 @@ data.append(f"--{boundary}--\r\n".encode("utf-8"))
 
 body = b"".join([d.encode("utf-8") if isinstance(d, str) else d for d in data])
 req = urllib.request.Request(url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+
 try:
     with urllib.request.urlopen(req) as response:
         print("Gửi Discord thành công:", response.status)

@@ -53,7 +53,10 @@ public class GuiDumperModule extends Module {
         root.addProperty("mod", "Van Gioi Addon");
         root.addProperty("screenClass", mc.currentScreen.getClass().getName());
         root.addProperty("screenTitle", screen.getTitle().getString());
-        root.addProperty("handlerType", handler.getType().toString());
+        
+        String handlerType = (handler.getType() != null) ? handler.getType().toString() : "unknown_custom_gui";
+        root.addProperty("handlerType", handlerType);
+        
         root.addProperty("slotCount", handler.slots.size());
 
         JsonArray slots = new JsonArray();
@@ -72,8 +75,32 @@ public class GuiDumperModule extends Module {
                 slotJson.addProperty("itemId", stack.getItem().toString());
                 slotJson.addProperty("itemName", stack.getName().getString());
                 slotJson.addProperty("count", stack.getCount());
+                slotJson.addProperty("maxCount", stack.getMaxCount()); // Đã thêm giới hạn stack (VD: 16, 64)
                 slotJson.addProperty("maxDamage", stack.getMaxDamage());
                 slotJson.addProperty("damage", stack.getDamage());
+
+                // ==========================================
+                // VÙNG DUMP DATA (NBT / COMPONENTS)
+                // ==========================================
+                
+                try {
+                    /* CÁCH 1: Dành cho MINECRAFT 1.20.4 TRỞ XUỐNG (Dùng NBT) 
+                     * Nếu bạn code bản 1.21 thì hãy XÓA hoặc COMMENT 3 dòng dưới này lại.
+                     */
+                    if (stack.hasNbt() && stack.getNbt() != null) {
+                        slotJson.addProperty("nbtData", stack.getNbt().toString());
+                    }
+                    
+                    /* CÁCH 2: Dành cho MINECRAFT 1.21 TRỞ LÊN (Dùng Components) 
+                     * BỎ COMMENT dòng bên dưới nếu bạn đang dùng 1.21+
+                     */
+                    // slotJson.addProperty("componentData", stack.getComponents().toString());
+
+                } catch (Exception e) {
+                    // Bỏ qua nếu có lỗi khi trích xuất data
+                    slotJson.addProperty("dataError", e.getMessage());
+                }
+                // ==========================================
             }
             slots.add(slotJson);
         }
@@ -81,7 +108,7 @@ public class GuiDumperModule extends Module {
 
         try (FileWriter writer = new FileWriter(target, StandardCharsets.UTF_8)) {
             writer.write(GSON.toJson(root));
-            info("Dump GUI da luu vao: " + target.getAbsolutePath());
+            info("Dump GUI da luu vao: " + target.getName());
         } catch (IOException e) {
             error("Khong ghi duoc file dump: " + e.getMessage());
         }
@@ -91,12 +118,14 @@ public class GuiDumperModule extends Module {
         File base = new File(folder, "file.json");
         if (!base.exists()) return base;
 
-        int index = 1;
-        while (true) {
-            File candidate = new File(folder, "file" + index + ".json");
-            if (!candidate.exists()) return candidate;
-            index++;
+        for (int i = 1; i <= 1000; i++) {
+            File candidate = new File(folder, "file" + i + ".json");
+            if (!candidate.exists()) {
+                return candidate;
+            }
         }
+        
+        return new File(folder, "file_" + System.currentTimeMillis() + ".json");
     }
 
     private static String sanitizeName(String input) {

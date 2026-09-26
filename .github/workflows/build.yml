@@ -1,4 +1,3 @@
-
 name: Build
 
 on:
@@ -29,19 +28,20 @@ jobs:
       - name: Grant execute permission for gradlew (if present)
         run: |
           if [ -f "./gradlew" ]; then chmod +x ./gradlew; fi
+
       - name: Build with Gradle
         run: |
           if [ -f "./gradlew" ]; then
-            ./gradlew clean build --refresh-dependencies --no-daemon
+            ./gradlew clean build --refresh-dependencies --no-daemon -Pbuild_number=${{ github.run_number }}
           else
-            gradle clean build --refresh-dependencies --no-daemon
+            gradle clean build --refresh-dependencies --no-daemon -Pbuild_number=${{ github.run_number }}
           fi
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: vangioi-addon-build-${{ github.run_number }}
           path: |
-            build/source-dist/*-src.zip
             build/libs/*.jar
           if-no-files-found: error
 
@@ -54,5 +54,4 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
-            build/source-dist/*-src.zip
             build/libs/*.jar

@@ -63,15 +63,12 @@ jobs:
               print("Lỗi: Chưa cấu hình DISCORD_WEBHOOK_URL secret!")
               exit(1)
 
-          # Tìm file .jar trong thư mục build/libs
           jar_files = glob.glob("build/libs/*.jar")
           if not jar_files:
               print("Lỗi: Không tìm thấy file .jar nào!")
               exit(1)
           
           jar_path = jar_files[0]
-          
-          # Lấy số lần chạy workflow và git info an toàn
           run_num = os.environ.get("GITHUB_RUN_NUMBER", "1")
           
           try:
@@ -86,5 +83,35 @@ jobs:
 
           msg = f"🚀 **Build thành công số #{run_num}**\n📝 **Commit:** {commit_msg} (`{short_sha}`)"
 
-          # Đóng gói multipart/form-data gửi lên Discord Webhook
-          boundary = "----------------D
+          boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+          data = []
+          data.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n" + json.dumps({"content": msg}) + "\r\n")
+
+          with open(jar_path, "rb") as f:
+              file_bytes = f.read()
+          file_name = os.path.basename(jar_path)
+
+          data.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"file0\"; filename=\"{file_name}\"\r\nContent-Type: application/java-archive\r\n\r\n".encode("utf-8") + file_bytes + b"\r\n")
+          data.append(f"--{boundary}--\r\n".encode("utf-8"))
+
+          body = b"".join([d.encode("utf-8") if isinstance(d, str) else d for d in data])
+          req = urllib.request.Request(webhook_url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+
+          try:
+              with urllib.request.urlopen(req) as response:
+                  print("Gửi Discord thành công:", response.status)
+          except Exception as e:
+              print("Lỗi gửi Discord:", e)
+              exit(1)
+          EOF
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            build/libs/*.jar

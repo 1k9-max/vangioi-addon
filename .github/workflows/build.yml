@@ -54,7 +54,7 @@ jobs:
           JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
           
           if [ -f "$JAR_FILE" ]; then
-            # Lấy thông điệp commit an toàn và chuẩn xác trực tiếp từ biến môi trường của GitHub
+            # Lấy thông điệp commit an toàn từ GitHub context
             COMMIT_MSG="${{ github.event.head_commit.message }}"
             if [ -z "$COMMIT_MSG" ]; then
               COMMIT_MSG="${{ github.event.pull_request.title }}"
@@ -66,11 +66,14 @@ jobs:
             RUN_NUM="${{ github.run_number }}"
             SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
             
-            # Định dạng lại nội dung theo đúng yêu cầu (gọn gàng, bỏ repo và link)
-            MESSAGE="🚀 **Build thành công số #$RUN_NUM**
+            # Nội dung tin nhắn gọn gàng, không có repo và link
+            DISCORD_MSG="🚀 **Build thành công số #$RUN_NUM**
 📝 **Commit:** $COMMIT_MSG (\`$SHORT_SHA\`)"
+
+            export DISCORD_MSG
+            export JAR_FILE
             
-            # Gửi tệp jar và tin nhắn lên Discord
+            # Gửi tệp jar và tin nhắn lên Discord thông qua Python
             python3 -c '
 import os, urllib.request, json
 url = os.environ["DISCORD_WEBHOOK_URL"]

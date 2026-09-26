@@ -45,6 +45,7 @@ jobs:
           name: vangioi-addon-build-${{ github.run_number }}
           path: |
             build/libs/*.jar
+            build/distributions/*.zip
           if-no-files-found: error
 
       - name: Send File and Commit to Discord Webhook
@@ -63,9 +64,12 @@ jobs:
               print("Lỗi: Chưa cấu hình DISCORD_WEBHOOK_URL secret!")
               exit(1)
 
-          jar_files = glob.glob("build/libs/*.jar")
+          # Lấy tất cả file .jar, sau đó LỌC BỎ các file chứa chữ "-dev" hoặc "-sources"
+          all_jars = glob.glob("build/libs/*.jar")
+          jar_files = [f for f in all_jars if "-all-dev" not in f and "-sources" not in f]
+          
           if not jar_files:
-              print("Lỗi: Không tìm thấy file .jar nào!")
+              print("Lỗi: Không tìm thấy file .jar chính thức nào!")
               exit(1)
           
           jar_path = jar_files[0]
@@ -95,8 +99,6 @@ jobs:
           data.append(f"--{boundary}--\r\n".encode("utf-8"))
 
           body = b"".join([d.encode("utf-8") if isinstance(d, str) else d for d in data])
-          
-          # ĐÃ SỬA CHỖ NÀY: Thêm User-Agent để vượt qua tường lửa của Discord
           headers = {
               "Content-Type": f"multipart/form-data; boundary={boundary}",
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -108,9 +110,20 @@ jobs:
                   print("Gửi Discord thành công:", response.status)
           except urllib.error.HTTPError as e:
               print(f"Lỗi gửi Discord: HTTP Error {e.code}: {e.reason}")
-              print(e.read().decode("utf-8")) # In ra chi tiết lỗi từ Discord nếu có
               exit(1)
           except Exception as e:
               print("Lỗi gửi Discord:", e)
               exit(1)
           EOF
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            build/libs/*.jar
+            build/distributions/*.zip

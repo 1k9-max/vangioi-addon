@@ -95,23 +95,22 @@ jobs:
           data.append(f"--{boundary}--\r\n".encode("utf-8"))
 
           body = b"".join([d.encode("utf-8") if isinstance(d, str) else d for d in data])
-          req = urllib.request.Request(webhook_url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+          
+          # ĐÃ SỬA CHỖ NÀY: Thêm User-Agent để vượt qua tường lửa của Discord
+          headers = {
+              "Content-Type": f"multipart/form-data; boundary={boundary}",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          }
+          req = urllib.request.Request(webhook_url, data=body, headers=headers)
 
           try:
               with urllib.request.urlopen(req) as response:
                   print("Gửi Discord thành công:", response.status)
+          except urllib.error.HTTPError as e:
+              print(f"Lỗi gửi Discord: HTTP Error {e.code}: {e.reason}")
+              print(e.read().decode("utf-8")) # In ra chi tiết lỗi từ Discord nếu có
+              exit(1)
           except Exception as e:
               print("Lỗi gửi Discord:", e)
               exit(1)
           EOF
-
-      - name: Create GitHub Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: Build ${{ github.run_number }}
-          target_commitish: ${{ github.sha }}
-          generate_release_notes: true
-          files: |
-            build/libs/*.jar

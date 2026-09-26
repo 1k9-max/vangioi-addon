@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -45,32 +47,55 @@ jobs:
             build/libs/*.jar
           if-no-files-found: error
 
-      - name: Get commit message
-        id: commit_info
-        run: |
-          echo "message=$(git log -1 --pretty=format:'\%s')" >> $GITHUB_OUTPUT
-
       - name: Send File and Commit to Discord Webhook
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          # Tìm file .jar trong thư mục build/libs
           JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
           
           if [ -f "$JAR_FILE" ]; then
-            COMMIT_MSG="${{ steps.commit_info.outputs.message }}"
+            # Lấy thông điệp commit an toàn và chuẩn xác trực tiếp từ biến môi trường của GitHub
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            if [ -z "$COMMIT_MSG" ]; then
+              COMMIT_MSG="${{ github.event.pull_request.title }}"
+            fi
+            if [ -z "$COMMIT_MSG" ]; then
+              COMMIT_MSG="Cập nhật mã nguồn"
+            fi
+            
             RUN_NUM="${{ github.run_number }}"
-            REPO_NAME="${{ github.repository }}"
-            COMMIT_SHA="${{ github.sha }}"
-            SHORT_SHA=$(echo$COMMIT_SHA | cut -c1-7)
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
             
-            # Nội dung tin nhắn kèm thông tin commit
-            MESSAGE="🚀 **Build thành công số #$RUN_NUM**\n📦 Repository: \`$REPO_NAME\`\n📝 Commit: \`$COMMIT_MSG\` (\`$SHORT_SHA\`)\n🔗 [Xem chi tiết trên GitHub](https://github.com/$REPO_NAME/actions/runs/${{ github.run_id }})"
+            # Định dạng lại nội dung theo đúng yêu cầu (gọn gàng, bỏ repo và link)
+            MESSAGE="🚀 **Build thành công số #$RUN_NUM**
+📝 **Commit:** $COMMIT_MSG (\`$SHORT_SHA\`)"
             
-            # Gửi file .jar cùng nội dung lên Discord thông qua curl
-            curl -F "file0=@$JAR_FILE" \
-                 -F "payload_json={\"content\": \"$MESSAGE\"}" \
-                 "$DISCORD_WEBHOOK_URL"
+            # Gửi tệp jar và tin nhắn lên Discord
+            python3 -c '
+import os, urllib.request, json
+url = os.environ["DISCORD_WEBHOOK_URL"]
+msg = os.environ["DISCORD_MSG"]
+jar_path = os.environ["JAR_FILE"]
+
+boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+data = []
+data.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n" + json.dumps({"content": msg}) + "\r\n")
+
+with open(jar_path, "rb") as f:
+    file_bytes = f.read()
+file_name = os.path.basename(jar_path)
+
+data.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"file0\"; filename=\"{file_name}\"\r\nContent-Type: application/java-archive\r\n\r\n".encode("utf-8") + file_bytes + b"\r\n")
+data.append(f"--{boundary}--\r\n".encode("utf-8"))
+
+body = b"".join([d.encode("utf-8") if isinstance(d, str) else d for d in data])
+req = urllib.request.Request(url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+try:
+    with urllib.request.urlopen(req) as response:
+        print("Gửi Discord thành công:", response.status)
+except Exception as e:
+    print("Lỗi gửi Discord:", e)
+            '
           else
             echo "Không tìm thấy file .jar để gửi lên Discord!"
             exit 1
